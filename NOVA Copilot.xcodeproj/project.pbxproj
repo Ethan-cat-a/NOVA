@@ -1,0 +1,81 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+/* PBXBuildFile section */
+ A10000000000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* AppDelegate.swift */; };
+ A10000000000000000000002 /* AssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* AssistantView.swift */; };
+ A10000000000000000000003 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* Models.swift */; };
+ A10000000000000000000004 /* NovaAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* NovaAPIClient.swift */; };
+ A10000000000000000000005 /* NovaChatModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* NovaChatModel.swift */; };
+ A10000000000000000000006 /* PanelState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* PanelState.swift */; };
+ A10000000000000000000007 /* NOVACopilotMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* NOVACopilotMain.swift */; };
+ A10000000000000000000008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* Assets.xcassets */; };
+/* PBXFileReference section */
+ B10000000000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/AppDelegate.swift; sourceTree = "<group>"; };
+ B10000000000000000000002 /* AssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/AssistantView.swift; sourceTree = "<group>"; };
+ B10000000000000000000003 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Models.swift; sourceTree = "<group>"; };
+ B10000000000000000000004 /* NovaAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/NovaAPIClient.swift; sourceTree = "<group>"; };
+ B10000000000000000000005 /* NovaChatModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/NovaChatModel.swift; sourceTree = "<group>"; };
+ B10000000000000000000006 /* PanelState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/PanelState.swift; sourceTree = "<group>"; };
+ B10000000000000000000007 /* NOVACopilotMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/NOVACopilotMain.swift; sourceTree = "<group>"; };
+ B10000000000000000000009 /* NOVA Copilot.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NOVA Copilot.entitlements"; sourceTree = "<group>"; };
+ B10000000000000000000008 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+ B10000000000000000000010 /* NOVA Copilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "NOVA Copilot.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* PBXFrameworksBuildPhase section */
+ C10000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* PBXGroup section */
+ D10000000000000000000001 = {isa = PBXGroup; children = (D10000000000000000000002 /* NOVA Copilot */, D10000000000000000000003 /* Products */); sourceTree = "<group>"; };
+ D10000000000000000000002 /* NOVA Copilot */ = {isa = PBXGroup; path = "NOVA Copilot"; sourceTree = "<group>"; children = (B10000000000000000000001 /* AppDelegate.swift */, B10000000000000000000002 /* AssistantView.swift */, B10000000000000000000003 /* Models.swift */, B10000000000000000000004 /* NovaAPIClient.swift */, B10000000000000000000005 /* NovaChatModel.swift */, B10000000000000000000006 /* PanelState.swift */, B10000000000000000000007 /* NOVACopilotMain.swift */, B10000000000000000000009 /* NOVA Copilot.entitlements */, B10000000000000000000008 /* Assets.xcassets */); };
+ D10000000000000000000003 /* Products */ = {isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (B10000000000000000000010 /* NOVA Copilot.app */); };
+/* PBXNativeTarget section */
+ E10000000000000000000001 /* NOVA Copilot */ = {isa = PBXNativeTarget; buildConfigurationList = F10000000000000000000002 /* Build configuration list for PBXNativeTarget "NOVA Copilot" */; buildPhases = (C10000000000000000000001 /* Frameworks */, C10000000000000000000002 /* Sources */, C10000000000000000000003 /* Resources */); buildRules = (); dependencies = (); name = "NOVA Copilot"; productName = "NOVA Copilot"; productReference = B10000000000000000000010 /* NOVA Copilot.app */; productType = "com.apple.product-type.application"; };
+/* PBXSourcesBuildPhase section */
+ C10000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* AppDelegate.swift in Sources */, A10000000000000000000002 /* AssistantView.swift in Sources */, A10000000000000000000003 /* Models.swift in Sources */, A10000000000000000000004 /* NovaAPIClient.swift in Sources */, A10000000000000000000005 /* NovaChatModel.swift in Sources */, A10000000000000000000006 /* PanelState.swift in Sources */, A10000000000000000000007 /* NOVACopilotMain.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+ C10000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000008 /* Assets.xcassets in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+/* XCConfigurationList section */
+ F10000000000000000000001 /* Build configuration list for PBXProject "NOVA Copilot" */ = {isa = XCConfigurationList; buildConfigurations = (G10000000000000000000001 /* Debug */, G10000000000000000000002 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+ F10000000000000000000002 /* Build configuration list for PBXNativeTarget "NOVA Copilot" */ = {isa = XCConfigurationList; buildConfigurations = (G10000000000000000000003 /* Debug */, G10000000000000000000004 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* XCBuildConfiguration section */
+ G10000000000000000000001 /* Debug project */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; }; name = Debug; };
+ G10000000000000000000002 /* Release project */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; }; name = Release; };
+ G10000000000000000000003 /* Debug target */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ CODE_SIGN_ENTITLEMENTS = "NOVA Copilot/NOVA Copilot.entitlements";
+ CODE_SIGN_STYLE = Automatic;
+ CURRENT_PROJECT_VERSION = 2;
+ ENABLE_APP_SANDBOX = YES;
+ GENERATE_INFOPLIST_FILE = YES;
+ INFOPLIST_KEY_CFBundleDisplayName = "NOVA Copilot";
+ INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+ INFOPLIST_KEY_LSUIElement = NO;
+ MACOSX_DEPLOYMENT_TARGET = 13.0;
+ MARKETING_VERSION = 1.1.2;
+ PRODUCT_BUNDLE_IDENTIFIER = com.novatechnologies.novacopilot;
+ PRODUCT_NAME = "NOVA Copilot";
+ SDKROOT = macosx;
+ SWIFT_EMIT_LOC_STRINGS = YES;
+ SWIFT_VERSION = 5.0;}; name = Debug; };
+ G10000000000000000000004 /* Release target */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ CODE_SIGN_ENTITLEMENTS = "NOVA Copilot/NOVA Copilot.entitlements";
+ CODE_SIGN_STYLE = Automatic;
+ CURRENT_PROJECT_VERSION = 2;
+ ENABLE_APP_SANDBOX = YES;
+ ENABLE_HARDENED_RUNTIME = YES;
+ GENERATE_INFOPLIST_FILE = YES;
+ INFOPLIST_KEY_CFBundleDisplayName = "NOVA Copilot";
+ INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+ INFOPLIST_KEY_LSUIElement = NO;
+ MACOSX_DEPLOYMENT_TARGET = 13.0;
+ MARKETING_VERSION = 1.1.2;
+ PRODUCT_BUNDLE_IDENTIFIER = com.novatechnologies.novacopilot;
+ PRODUCT_NAME = "NOVA Copilot";
+ SDKROOT = macosx;
+ SWIFT_EMIT_LOC_STRINGS = YES;
+ SWIFT_VERSION = 5.0;}; name = Release; };
+/* PBXProject section */
+ H10000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 1600; LastSwiftUpdateCheck = 1600; }; buildConfigurationList = F10000000000000000000001 /* Build configuration list for PBXProject "NOVA Copilot" */; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; mainGroup = D10000000000000000000001; productRefGroup = D10000000000000000000003 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (E10000000000000000000001 /* NOVA Copilot */,); };
+ };
+ rootObject = H10000000000000000000001 /* Project object */;
+}
