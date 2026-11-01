@@ -4,13 +4,13 @@
   <p><strong>Your AI copilot, one shortcut away.</strong></p>
   <p>A native macOS assistant that keeps Nova close—from the menu bar or with ⌘⇧Space.</p>
   <p>
-    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.1.2.dmg"><strong>↓ Download for Mac · DMG</strong></a>
+    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.2.0.dmg"><strong>↓ Download for Mac · DMG</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases">All releases</a>
     &nbsp; · &nbsp;
     <a href="#features">Explore features</a>
   </p>
-  <p><sub>macOS 13+ &nbsp;·&nbsp; Apple silicon and Intel &nbsp;·&nbsp; Version 1.1.2</sub></p>
+  <p><sub>macOS 13+ &nbsp;·&nbsp; Apple silicon and Intel &nbsp;·&nbsp; Version 1.2.0</sub></p>
 </div>
 
 ---
@@ -23,7 +23,7 @@ NOVA Copilot brings the Nova assistant into a lightweight Mac app. Pop open a fl
 
 | **Stay in your flow** | **Choose how to think** | **Keep control** |
 | --- | --- | --- |
-| Open from the menu bar or press **⌘⇧Space**. Keep the panel close while you work. | Switch between **Fast**, **Hard Thinker**, and **Coding** modes. | Stop a reply, keep local chat history, and choose when clipboard text is added. |
+| Open from the menu bar or press **⌘⇧Space**. Pull the right-edge handle to slide the panel in. | Switch between **Fast**, **Hard Thinker**, and **Coding** modes. | Stop a reply, keep local chat history, and choose when clipboard text is added. |
 
 - **Streaming responses** appear as Nova generates them.
 - **Recent chats** make it easy to pick up where you left off.
@@ -31,7 +31,7 @@ NOVA Copilot brings the Nova assistant into a lightweight Mac app. Pop open a fl
 
 ## Install in a minute
 
-1. [Download the Mac installer](https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.1.2.dmg).
+1. [Download the Mac installer](https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.2.0.dmg).
 2. Open the DMG and drag **NOVA Copilot.app** to **Applications**.
 3. Launch it from Applications.
 
