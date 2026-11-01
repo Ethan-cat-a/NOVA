@@ -1,65 +1,67 @@
-# NOVA Copilot for macOS — Version 1.1.2
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/NOVAIcon.imageset/nova-icon.png" width="112" alt="NOVA Copilot app icon" />
+  <h1>NOVA Copilot</h1>
+  <p><strong>Your AI copilot, one shortcut away.</strong></p>
+  <p>A native macOS assistant that keeps Nova close—from the menu bar or with ⌘⇧Space.</p>
+  <p>
+    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.1.2.dmg"><strong>↓ Download for Mac · DMG</strong></a>
+    &nbsp; · &nbsp;
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases">All releases</a>
+    &nbsp; · &nbsp;
+    <a href="#features">Explore features</a>
+  </p>
+  <p><sub>macOS 13+ &nbsp;·&nbsp; Apple silicon and Intel &nbsp;·&nbsp; Version 1.1.2</sub></p>
+</div>
 
-A native macOS desktop app with a Dock icon, a floating assistant panel, and a menu-bar control. It connects directly to the existing Nova V8 chat backend.
+---
 
-## Direct Nova V8 connection
+## ✨ Nova, right where you need it
 
-The app sends chat requests to:
-
-`https://nova-v8.vercel.app/api/chat`
-
-It uses Nova V8's existing API contract:
-
-- `GET /api/chat` for the backend health check.
-- `POST /api/chat` with `{ "messages": [{ "role": "user" | "assistant", "content": "..." }] }`.
-- The response is streamed as UTF-8 plain text, so replies appear as Nova generates them.
-
-The app does **not** embed an OpenRouter/API key. Credentials remain on the Nova V8 Vercel server. No Nova V8 frontend deployment or environment-variable change is required by this Mac client as long as the existing V8 `/api/chat` endpoint remains enabled.
+NOVA Copilot brings the Nova assistant into a lightweight Mac app. Pop open a floating panel, ask a question, and get a streamed reply without losing your place.
 
 ## Features
 
-- Native floating panel positioned near the right edge of the screen.
-- Dock app icon, high-contrast sparkle menu-bar button, and global shortcut `⌘⇧Space` to show/hide the panel.
-- Clicking the Dock icon or choosing **Show NOVA Copilot** reopens a hidden panel.
-- Fast, Hard Thinker, and Coding response modes.
-- Streaming replies and stop/cancel support.
-- Local chat history stored on this Mac (up to 40 recent conversations).
-- Recent-chat switching and new-chat action.
-- Optional keep-on-top and Launch at Login settings.
-- Manual clipboard-context insertion. The app only reads clipboard text when you press the paperclip or the clipboard starter; it does not monitor the clipboard.
-- Custom NOVA Copilot macOS app icon and matching in-app brand logo.
+| **Stay in your flow** | **Choose how to think** | **Keep control** |
+| --- | --- | --- |
+| Open from the menu bar or press **⌘⇧Space**. Keep the panel close while you work. | Switch between **Fast**, **Hard Thinker**, and **Coding** modes. | Stop a reply, keep local chat history, and choose when clipboard text is added. |
 
-## Install the shareable build
+- **Streaming responses** appear as Nova generates them.
+- **Recent chats** make it easy to pick up where you left off.
+- **Launch at Login** and **Keep on Top** are optional.
 
-Extract `NOVA-Copilot-macOS-1.1.2.zip`, then move **NOVA Copilot 1.1.2.app** into **Applications**. The app requires macOS 13 or later and an internet connection to reach Nova V8.
+## Install in a minute
 
-This build uses an ad hoc local signature; it is not signed with a Developer ID certificate or notarized. macOS may ask you to confirm the first launch. Only open it if you trust the person who shared it. A Developer ID signature and Apple notarization are needed for a no-warning download experience.
+1. [Download the Mac installer](https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.1.2.dmg).
+2. Open the DMG and drag **NOVA Copilot.app** to **Applications**.
+3. Launch it from Applications.
 
-## Prepare a no-warning release
+Requires **macOS 13 or later** and an internet connection. The universal build supports Apple silicon and Intel Macs.
 
-The Release configuration enables the hardened runtime required for notarization. To distribute an app that Gatekeeper opens without the first-open warning, the app still needs a Developer ID Application signature and Apple notarization. These require an active Apple Developer Program membership and a Developer ID certificate available in the signing Mac's Keychain. No certificate is currently installed on the build Mac.
+> **First launch:** This build is not signed with a Developer ID certificate or notarized. If macOS blocks it, open **System Settings → Privacy & Security → Open Anyway**, then confirm **Open**. Only install apps from people you trust.
 
-After the certificate is installed, open the project in Xcode, choose **Product > Archive**, then use Organizer's **Distribute App > Developer ID > Upload** flow to sign and submit the archive for notarization. Export the accepted, notarized app for sharing.
+## Privacy, by design
 
-The app does not include an API key; chat requests go to the existing Nova V8 server.
+- The app contains **no API key**; chat requests go to the existing Nova V8 server.
+- Chat history stays on your Mac.
+- Clipboard text is read only when you choose the clipboard action; the app does not monitor it.
 
-## Build in Xcode
+<details>
+<summary><strong>For developers</strong></summary>
 
-1. Extract the ZIP.
-2. Open `NOVA Copilot.xcodeproj` in Xcode.
-3. Select the **NOVA Copilot** scheme and **My Mac** as the destination.
-4. In **Signing & Capabilities**, select your Personal Team for local builds. Public distribution needs an Apple Developer Program team and a Developer ID Application certificate.
-5. Press `⌘B` to build, then `⌘R` to run.
-6. NOVA Copilot appears in the Dock and menu bar. Press `⌘⇧Space` from another app to show or hide the floating panel.
+### Build from source
 
-The project targets macOS 13 or later. Xcode can build a local `.app` for your Mac; distributing it without Gatekeeper warnings requires Developer ID signing and notarization.
+1. Open `NOVA Copilot.xcodeproj` in Xcode.
+2. Select the **NOVA Copilot** scheme and **My Mac** as the destination.
+3. Choose a signing team under **Signing & Capabilities**, then build with **⌘B** or run with **⌘R**.
 
-## Connection check
+### Backend
 
-On launch, the status line checks Nova V8's `/api/chat` health endpoint. A green dot and `Nova V8 connected` indicate the backend health check passed. If it shows `Connection unavailable`, check that `https://nova-v8.vercel.app/api/chat` is deployed and reachable from your Mac. The first live chat also verifies the POST/streaming path.
+The app connects to `https://nova-v8.vercel.app/api/chat` using Nova V8's existing chat endpoint. No frontend or server configuration change is required for this client.
 
-## Privacy and storage
+</details>
 
-- API credentials remain server-side on Nova V8.
-- Conversation history is saved locally through macOS `UserDefaults` under the existing NOVA Companion history key for compatibility with that earlier build.
-- The app requests network-client permission only; it does not request full disk access, screen recording, accessibility control, or automatic clipboard monitoring.
+---
+
+<div align="center">
+  <sub>Made for macOS. Built to keep Nova within reach. ✦</sub>
+</div>
