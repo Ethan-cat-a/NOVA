@@ -8,9 +8,7 @@ struct AssistantView: View {
     let onQuit: () -> Void
 
     @FocusState private var inputFocused: Bool
-    @State private var showAlert = false
-    @State private var alertTitle = "NOVA Copilot"
-    @State private var alertMessage = ""
+    @StateObject private var viewState = AssistantViewState()
 
     private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
     private let ink = Color(red: 0.09, green: 0.13, blue: 0.20)
@@ -36,18 +34,18 @@ struct AssistantView: View {
         .onChange(of: model.lastError) { value in
             if let value, !model.isSending { showNotice("NOVA Copilot", message: value) }
         }
-        .alert(Text(alertTitle), isPresented: $showAlert) {
+        .alert(Text(viewState.alertTitle), isPresented: $viewState.showAlert) {
             Button("OK", role: .cancel) {
-                showAlert = false
+                viewState.showAlert = false
                 model.clearDisplayedError()
             }
-        } message: { Text(alertMessage) }
+        } message: { Text(viewState.alertMessage) }
     }
 
     private func showNotice(_ title: String, message: String) {
-        alertTitle = title
-        alertMessage = message
-        showAlert = true
+        viewState.alertTitle = title
+        viewState.alertMessage = message
+        viewState.showAlert = true
     }
 
     private var header: some View {
@@ -316,6 +314,13 @@ struct AssistantView: View {
         .background(.white)
         .overlay(alignment: .top) { Rectangle().fill(Color(red: 0.89, green: 0.91, blue: 0.94)).frame(height: 1) }
     }
+}
+
+@MainActor
+private final class AssistantViewState: ObservableObject {
+    @Published var showAlert = false
+    @Published var alertTitle = "NOVA Copilot"
+    @Published var alertMessage = ""
 }
 
 private struct MessageBubble: View {
