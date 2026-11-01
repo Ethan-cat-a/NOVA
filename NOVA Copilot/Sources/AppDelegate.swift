@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import QuartzCore
 import SwiftUI
 
 private func novaCopilotHotKeyHandler(
@@ -26,15 +27,63 @@ private func novaCopilotHotKeyHandler(
 
 @MainActor
 final class FloatingPanel: NSPanel {
+    var onEscape: (() -> Void)?
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 {
-            orderOut(nil)
+            onEscape?()
             return
         }
         super.keyDown(with: event)
+    }
+}
+
+@MainActor
+private final class EdgeHandlePanel: NSPanel {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
+private struct EdgeHandleView: View {
+    let onOpen: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: onOpen) {
+            VStack(spacing: 9) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11, weight: .semibold))
+                Capsule()
+                    .fill(Color.white.opacity(0.38))
+                    .frame(width: 2, height: 26)
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(width: 36, height: 108)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(red: 0.035, green: 0.06, blue: 0.14).opacity(0.96))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+            .shadow(
+                color: Color.cyan.opacity(isHovered ? 0.42 : 0.22),
+                radius: isHovered ? 18 : 10,
+                x: -5,
+                y: 0
+            )
+            .scaleEffect(isHovered ? 1.06 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isHovered)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .help("Open NOVA Copilot")
     }
 }
 
@@ -43,51 +92,102 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let chatModel = NovaChatModel()
     private let panelState = PanelState()
     private var panel: FloatingPanel!
+    private var edgeHandlePanel: EdgeHandlePanel!
     private var statusItem: NSStatusItem!
     private var hotKeyReference: EventHotKeyRef?
     private var eventHandlerReference: EventHandlerRef?
+    private var isPanelAnimating = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         createPanel()
         createApplicationMenu()
         createMenuBarItem()
+        createEdgeHandle()
         registerGlobalHotKey()
+
         panelState.onPinChanged = { [weak self] pinned in
             self?.panel.level = pinned ? .floating : .normal
         }
 
-        // Show the assistant immediately, while keeping the regular app
-        // available from both the Dock and the menu bar.
-        NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+        // Leave the assistant tucked away, with both quick access points ready.
+        edgeHandlePanel.orderFrontRegardless()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        guard !hasVisibleWindows else { return true }
+        guard !panel.isVisible else { return true }
         showPanel()
         return false
     }
 
     func togglePanel() {
-        guard let panel else { return }
+        guard !isPanelAnimating else { return }
         if panel.isVisible {
-            panel.orderOut(nil)
+            hidePanel()
         } else {
             showPanel()
         }
     }
 
     private func showPanel() {
-        placePanelAtRightEdgeIfNeeded()
+        guard !isPanelAnimating else { return }
+        guard let screen = screenUnderPointer() else {
+            edgeHandlePanel.orderOut(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let visibleFrame = screen.visibleFrame
+        let targetOrigin = panelTargetOrigin(on: screen)
+        let startOrigin = NSPoint(x: visibleFrame.maxX + 22, y: targetOrigin.y)
+        let overshootOrigin = NSPoint(x: targetOrigin.x - 14, y: targetOrigin.y)
+
+        edgeHandlePanel.orderOut(nil)
+        panel.setFrameOrigin(startOrigin)
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
+        isPanelAnimating = true
+
+        // Slide in with a small spring overshoot, then settle into place.
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.36
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.18, 0.88, 0.24, 1.04)
+            panel.animator().setFrameOrigin(overshootOrigin)
+        }, completionHandler: { [weak self] in
+            guard let self = self else { return }
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.13
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                self.panel.animator().setFrameOrigin(targetOrigin)
+            }, completionHandler: { [weak self] in
+                self?.isPanelAnimating = false
+            })
+        })
     }
 
-    private func hidePanel() { panel.orderOut(nil) }
+    private func hidePanel() {
+        guard panel.isVisible, !isPanelAnimating else { return }
+        isPanelAnimating = true
+
+        let screen = screenContainingPanel() ?? screenUnderPointer()
+        let exitX = (screen?.visibleFrame.maxX ?? panel.frame.maxX) + 22
+        let exitOrigin = NSPoint(x: exitX, y: panel.frame.origin.y)
+
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.26
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.4, 0.0, 1.0, 0.6)
+            panel.animator().setFrameOrigin(exitOrigin)
+        }, completionHandler: { [weak self] in
+            guard let self = self else { return }
+            self.panel.orderOut(nil)
+            self.isPanelAnimating = false
+            self.showEdgeHandle(on: screen)
+        })
+    }
 
     private func createApplicationMenu() {
         let mainMenu = NSMenu()
@@ -138,22 +238,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showPanelFromMenu() { showPanel() }
 
     private func createMenuBarItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.isVisible = true
         if let button = statusItem.button {
-            // Menu bar items should use a template image so macOS can draw
-            // them with enough contrast in both light and dark menu bars.
             let menuBarImage = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "NOVA Copilot")
             menuBarImage?.isTemplate = true
             menuBarImage?.size = NSSize(width: 16, height: 16)
             button.image = menuBarImage
-            button.toolTip = "NOVA Copilot · ⌘⇧Space"
+            button.title = "NOVA"
+            button.imagePosition = .imageLeading
+            button.toolTip = "Open NOVA Copilot · ⌘⇧Space"
             button.target = self
             button.action = #selector(menuBarButtonPressed)
         }
     }
 
-    @objc private func menuBarButtonPressed() { togglePanel() }
+    private func createEdgeHandle() {
+        let size = NSSize(width: 48, height: 124)
+        edgeHandlePanel = EdgeHandlePanel(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        edgeHandlePanel.isOpaque = false
+        edgeHandlePanel.backgroundColor = .clear
+        edgeHandlePanel.hasShadow = false
+        edgeHandlePanel.level = .floating
+        edgeHandlePanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        edgeHandlePanel.isMovableByWindowBackground = false
+        edgeHandlePanel.contentView = NSHostingView(rootView: EdgeHandleView(
+            onOpen: { [weak self] in self?.showPanel() }
+        ))
+        positionEdgeHandle()
+        edgeHandlePanel.orderFrontRegardless()
+    }
+
+    private func positionEdgeHandle(on preferredScreen: NSScreen? = nil) {
+        guard let screen = preferredScreen ?? screenUnderPointer() else { return }
+        let visibleFrame = screen.visibleFrame
+        let frame = edgeHandlePanel.frame
+        let visibleWidth: CGFloat = 34
+        let x = visibleFrame.maxX - visibleWidth
+        let y = visibleFrame.midY - frame.height / 2
+        edgeHandlePanel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    private func showEdgeHandle(on screen: NSScreen? = nil) {
+        positionEdgeHandle(on: screen)
+        edgeHandlePanel.orderFrontRegardless()
+    }
 
     private func createPanel() {
         let rect = NSRect(x: 0, y: 0, width: 425, height: 690)
@@ -179,6 +313,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
+        panel.onEscape = { [weak self] in self?.hidePanel() }
         panel.contentView = NSHostingView(rootView: AssistantView(
             model: chatModel,
             panelState: panelState,
@@ -190,12 +325,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func placePanelAtRightEdgeIfNeeded() {
         if panel.setFrameUsingName("NOVACopilotFloatingPanel") { return }
-        guard let screen = NSScreen.main ?? NSScreen.screens.first else { panel.center(); return }
+        guard let screen = screenUnderPointer() else { panel.center(); return }
         let visible = screen.visibleFrame
         let frame = panel.frame
         let x = visible.maxX - frame.width - 16
-        let y = visible.maxY - frame.height - 16
-        panel.setFrameOrigin(NSPoint(x: x, y: max(visible.minY + 16, y)))
+        let y = max(visible.minY + 16, visible.maxY - frame.height - 16)
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    private func panelTargetOrigin(on screen: NSScreen) -> NSPoint {
+        let visible = screen.visibleFrame
+        let frame = panel.frame
+        let x = max(visible.minX + 12, visible.maxX - frame.width - 12)
+        let topAlignedY = visible.maxY - frame.height - 12
+        let y = max(visible.minY + 12, topAlignedY)
+        return NSPoint(x: x, y: y)
+    }
+
+    private func screenUnderPointer() -> NSScreen? {
+        let pointer = NSEvent.mouseLocation
+        return NSScreen.screens.first(where: { $0.frame.contains(pointer) })
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+    }
+
+    private func screenContainingPanel() -> NSScreen? {
+        let center = NSPoint(x: panel.frame.midX, y: panel.frame.midY)
+        return NSScreen.screens.first(where: { $0.frame.contains(center) })
     }
 
     private func registerGlobalHotKey() {

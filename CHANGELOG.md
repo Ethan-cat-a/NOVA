@@ -1,3 +1,10 @@
+# NOVA Copilot Version 1.2.0
+
+- Keeps a labeled NOVA control in the macOS menu bar alongside the global shortcut.
+- Adds a right-edge handle that opens the assistant with a spring-slide animation and returns it to the edge when dismissed.
+- Starts with the assistant tucked away, ready to open from the menu bar, screen edge, Dock, or keyboard shortcut.
+- Sets the marketing version to 1.2.0 and build number to 3.
+
 # NOVA Copilot Version 1.1.2
 
 - Runs as a regular macOS app with a Dock icon while retaining the menu-bar sparkle and global shortcut.
