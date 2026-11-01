@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/NOVAIcon.imageset/nova-icon.png" width="112" alt="NOVA Copilot app icon" />
+  <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="112" alt="NOVA Copilot app icon" />
   <h1>NOVA Copilot</h1>
   <p><strong>Your AI copilot, one shortcut away.</strong></p>
   <p>A native macOS assistant that keeps Nova close—from the menu bar or with ⌘⇧Space.</p>
