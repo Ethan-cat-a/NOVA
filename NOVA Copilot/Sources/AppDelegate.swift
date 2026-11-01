@@ -49,7 +49,7 @@ private final class EdgeHandlePanel: NSPanel {
 
 private struct EdgeHandleView: View {
     let onOpen: () -> Void
-    @State private var isHovered = false
+    @StateObject private var state = EdgeHandleViewState()
 
     var body: some View {
         Button(action: onOpen) {
@@ -73,18 +73,24 @@ private struct EdgeHandleView: View {
                     .stroke(Color.white.opacity(0.18), lineWidth: 1)
             )
             .shadow(
-                color: Color.cyan.opacity(isHovered ? 0.42 : 0.22),
-                radius: isHovered ? 18 : 10,
+                color: Color.cyan.opacity(state.isHovered ? 0.42 : 0.22),
+                radius: state.isHovered ? 18 : 10,
                 x: -5,
                 y: 0
             )
-            .scaleEffect(isHovered ? 1.06 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isHovered)
+            .scaleEffect(state.isHovered ? 1.06 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: state.isHovered)
         }
         .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
+        .onHover { state.isHovered = $0 }
         .help("Open NOVA Copilot")
     }
+}
+
+
+@MainActor
+private final class EdgeHandleViewState: ObservableObject {
+    @Published var isHovered = false
 }
 
 @MainActor
@@ -251,6 +257,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.target = self
             button.action = #selector(menuBarButtonPressed)
         }
+    }
+
+    @objc private func menuBarButtonPressed() {
+        togglePanel()
     }
 
     private func createEdgeHandle() {
