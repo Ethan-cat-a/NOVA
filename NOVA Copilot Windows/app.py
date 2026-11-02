@@ -453,10 +453,10 @@ class NovaCopilotApp:
         if not copied:
             messagebox.showinfo("Clipboard", "No text found. Copy some text in any app first.", parent=self.root)
             return
-        context = "Use this copied text as context.\\n\\n--- Clipboard text ---\\n" + copied[:18000] + "\\n--- End clipboard text ---\\n"
+        context = "Use this copied text as context.\n\n--- Clipboard text ---\n" + copied[:18000] + "\n--- End clipboard text ---\n"
         existing = self.input_text.get("1.0", "end-1c").strip()
         self.input_text.delete("1.0", "end")
-        self.input_text.insert("1.0", (existing + "\\n\\n" if existing else "") + context)
+        self.input_text.insert("1.0", (existing + "\n\n" if existing else "") + context)
         self.input_text.focus_set()
 
     def _send_shortcut(self, _event: tk.Event) -> str:
@@ -473,7 +473,7 @@ class NovaCopilotApp:
         thread = self.current_thread
         thread_id = thread["id"]
         if not thread["messages"] or thread.get("title") == "New chat":
-            thread["title"] = prompt.replace("\\n", " ")[:42]
+            thread["title"] = prompt.replace("\n", " ")[:42]
         thread["messages"].append({"id": str(uuid.uuid4()), "role": "user", "content": prompt, "created_at": utc_now()})
         self.response_message_id = str(uuid.uuid4())
         thread["messages"].append({"id": self.response_message_id, "role": "assistant", "content": "", "created_at": utc_now()})
@@ -587,7 +587,7 @@ class NovaCopilotApp:
                     message = self._find_message(thread_id, message_id)
                     if message is not None:
                         if error:
-                            message["content"] = (message["content"] + "\\n\\nConnection note: " if message["content"] else "Nova V8 error: ") + error
+                            message["content"] = (message["content"] + "\n\nConnection note: " if message["content"] else "Nova V8 error: ") + error
                         elif not message["content"]:
                             message["content"] = "Response stopped." if was_cancelled else "No response received."
                     self.is_sending = False
@@ -664,7 +664,7 @@ class NovaCopilotApp:
             ("</>", "Help with code", "Debug, build, or improve a project", self._prepare_coding_prompt),
         ]
         for icon, title, subtitle, action in suggestions:
-            card = tk.Frame(self.messages_frame, bg=WHITE, highlightbackground=BORDER, highlightthickness=1, padx=10, pady=10, cursor="hand2")
+            card = tk.Frame(welcome, bg=WHITE, highlightbackground=BORDER, highlightthickness=1, padx=10, pady=10, cursor="hand2")
             card.pack(fill="x", pady=4)
             card.bind("<Button-1>", lambda _e, fn=action: fn())
             tk.Label(card, text=icon, bg=ACCENT_LIGHT, fg=ACCENT, width=3, height=2, font=("Segoe UI", 12, "bold")).pack(side="left", padx=(0, 9))
