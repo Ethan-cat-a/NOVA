@@ -39,6 +39,18 @@ Requires **macOS 13 or later** and an internet connection. The universal build s
 
 > **First launch:** This build is not signed with a Developer ID certificate or notarized. If macOS blocks it, open **System Settings → Privacy & Security → Open Anyway**, then confirm **Open**. Only install apps from people you trust.
 
+## Windows / Lenovo ThinkPad (preview)
+
+A separate Windows edition is being prepared for **Lenovo ThinkPad and other Windows 10/11 PCs**. It is a Python/Tkinter port, not the native Swift macOS app, and it does not replace or change the Mac version.
+
+The Windows preview is designed to include:
+- A floating assistant panel, system-tray controls, and a right-edge launcher.
+- **Ctrl + Shift + Space** as its global shortcut.
+- Fast, Hard Thinker, and Coding modes, with streamed replies from the existing Nova V8 backend.
+- Chat history stored locally on the Windows PC and clipboard text inserted only when requested.
+
+The Windows 1.0.0 source package is currently distributed separately from this repository. It must be built on a Windows PC using the included `build_windows.bat`; the resulting `NOVA Copilot.exe` has not yet been built and tested on a physical ThinkPad. Treat this as an early preview rather than a signed public installer.
+
 ## Privacy, by design
 
 - The app contains **no API key**; chat requests go to the existing Nova V8 server.
