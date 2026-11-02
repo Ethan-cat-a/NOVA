@@ -1,19 +1,26 @@
-# NOVA Copilot for Windows
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
+  <h1>NOVA Copilot for Windows</h1>
+  <p><strong>Your AI copilot on Windows 10 and 11.</strong></p>
+  <p><img alt="Windows version" src="https://img.shields.io/badge/version-1.0.0-2857C5?style=flat-square&logo=windows&logoColor=white" /> <img alt="ThinkPad support" src="https://img.shields.io/badge/Lenovo-ThinkPad-263C63?style=flat-square" /></p>
+  <p>Standalone Windows edition · Python / Tkinter · NOVA V8 backend</p>
+</div>
 
-**Version 1.0.0 · Windows 10 / Windows 11 · Lenovo ThinkPad and other PCs**
+---
 
-This is the standalone Windows edition of NOVA Copilot. It is a Python/Tkinter port and is separate from the native macOS Swift application.
+## Your NOVA assistant, on your PC
+
+This is the independent Windows edition of NOVA Copilot. It is designed for Lenovo ThinkPad laptops and other Windows PCs. It is not the native macOS Swift application.
 
 ## Features
 
-- Floating assistant panel and right-edge launcher.
-- Global shortcut: **Ctrl + Shift + Space**.
-- Windows notification-area (system tray) icon.
-- Streaming replies through the existing Nova V8 backend.
-- Fast, Hard Thinker, and Coding modes.
+| **Quick access** | **AI modes** | **Desktop controls** |
+| --- | --- | --- |
+| Floating panel, right-edge launcher and **Ctrl + Shift + Space**. | Fast, Hard Thinker and Coding, with streamed replies. | System tray, Keep on Top and optional Launch at Login. |
+
 - Recent conversations and local chat history.
-- Clipboard text inserted only when requested.
-- Keep on top and optional Launch at Login.
+- Clipboard text inserted only when you explicitly request it.
+- Connects to the existing NOVA V8 chat backend.
 
 ## Install and build on Windows
 
@@ -26,8 +33,8 @@ To run from source without creating an executable, double-click `run.bat`.
 
 ## Executable and signing status
 
-- The Windows executable is generated locally by the build script; it is not prebuilt in the repository.
-- The source passed a ZIP integrity check and Python syntax compilation, but it has not yet been built or tested on a physical ThinkPad.
+- The executable is generated locally by the build script; it is not prebuilt in the repository.
+- The source has passed a ZIP integrity check and Python syntax compilation, but has not yet been built or tested on a physical ThinkPad.
 - The generated executable is not signed with a publicly trusted code-signing certificate. Windows SmartScreen may show a warning.
 
 ## Privacy and backend
@@ -37,7 +44,12 @@ To run from source without creating an executable, double-click `run.bat`.
 - Conversation history is stored locally at `%LOCALAPPDATA%\NOVA Copilot\threads.json`.
 - Clipboard contents are read only when you explicitly use the clipboard action.
 
-## Release notes
+## Source files
+
+- `app.py` — Windows desktop assistant.
+- `requirements.txt` — Python dependencies.
+- `build_windows.bat` — create the Windows executable.
+- `run.bat` — run from source.
 
 See [Windows 1.0.0 release notes](RELEASE_NOTES_v1.0.0.md).
 
