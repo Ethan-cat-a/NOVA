@@ -1,3 +1,10 @@
+# NOVA Copilot Version 1.3.2
+
+- Fixes launch failure by embedding the correct Frameworks runtime search path for Sparkle.
+- Disables Hardened Runtime library validation so the app can load the embedded ad-hoc-signed Sparkle framework when distributed without an Apple Developer ID.
+- Increments the marketing version to 1.3.2 and build number to 6.
+- Users on 1.2.0, 1.3.0, or 1.3.1 must install this release manually once; later updates can install through Sparkle.
+
 # NOVA Copilot Version 1.3.1
 
 - Fixes launch failure by adding the app’s embedded `Frameworks` directory to the runtime library search paths, so macOS can load Sparkle.
