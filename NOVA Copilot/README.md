@@ -2,8 +2,8 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS version" src="https://img.shields.io/badge/version-1.2.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.2.0/NOVA-Copilot-1.2.0.dmg"><strong>↓ Download NOVA Copilot for Mac</strong></a></p>
+  <p><img alt="macOS version" src="https://img.shields.io/badge/version-1.3.2-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.2.dmg"><strong>↓ Download NOVA Copilot for Mac</strong></a></p>
 </div>
 
 ---
@@ -24,13 +24,15 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the Mac DMG](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.2.0/NOVA-Copilot-1.2.0.dmg).
+1. [Download the Mac DMG](https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.2.dmg).
 2. Open the DMG and drag **NOVA Copilot.app** to **Applications**.
 3. Launch NOVA Copilot from Applications.
 
 Requires **macOS 13 or later**. The universal build supports Apple silicon and Intel Macs.
 
-> **First launch:** This build is not notarized. If macOS blocks it, open **System Settings → Privacy & Security → Open Anyway**, then confirm **Open**. Only install apps from a source you trust.
+> **Upgrade:** Users on 1.2.0, 1.3.0 or 1.3.1 need to install 1.3.2 manually once. Later updates can be installed from NOVA after you approve them.
+
+> **First launch:** This build is not notarized. If macOS blocks it, Control-click **NOVA Copilot.app** in Applications, choose **Open**, then confirm **Open**. Only install apps from a source you trust.
 
 ## Privacy
 
