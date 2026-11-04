@@ -1,6 +1,7 @@
 import AppKit
 import Carbon
 import QuartzCore
+import Sparkle
 import SwiftUI
 
 private func novaCopilotHotKeyHandler(
@@ -100,12 +101,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: FloatingPanel!
     private var edgeHandlePanel: EdgeHandlePanel!
     private var statusItem: NSStatusItem!
+    private var updaterController: SPUStandardUpdaterController!
     private var hotKeyReference: EventHotKeyRef?
     private var eventHandlerReference: EventHandlerRef?
     private var isPanelAnimating = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+        updaterController = SPUStandardUpdaterController(
+            startingUpdater: true,
+            updaterDelegate: nil,
+            userDriverDelegate: nil
+        )
         createPanel()
         createApplicationMenu()
         createMenuBarItem()
@@ -209,6 +216,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(aboutItem)
         appMenu.addItem(.separator())
 
+        let updatesItem = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(checkForUpdates),
+            keyEquivalent: ""
+        )
+        updatesItem.target = self
+        appMenu.addItem(updatesItem)
+        appMenu.addItem(.separator())
+
         let hideItem = NSMenuItem(
             title: "Hide NOVA Copilot",
             action: #selector(NSApplication.hide(_:)),
@@ -242,6 +258,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showPanelFromMenu() { showPanel() }
+
+    @objc private func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
+    }
 
     private func createMenuBarItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)

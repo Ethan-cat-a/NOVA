@@ -1,3 +1,11 @@
+# NOVA Copilot Version 1.3.0
+
+- Checks the signed GitHub-hosted Sparkle appcast once per day and includes a manual **Check for Updates…** menu item.
+- Prompts before downloading and installing an update; verifies the signed feed and update archive before installation.
+- Supports sandboxed installation through Sparkle’s installer service.
+- Sets the marketing version to 1.3.0 and build number to 4.
+- Existing 1.2.0 installs must install 1.3.0 manually once to receive future in-app updates.
+
 # NOVA Copilot Version 1.2.0
 
 - Keeps a labeled NOVA control in the macOS menu bar alongside the global shortcut.
