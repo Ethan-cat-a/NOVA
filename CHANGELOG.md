@@ -1,3 +1,9 @@
+# NOVA Copilot Version 1.3.1
+
+- Fixes launch failure by adding the app’s embedded `Frameworks` directory to the runtime library search paths, so macOS can load Sparkle.
+- Increments the marketing version to 1.3.1 and build number to 5.
+- Users on 1.2.0 or the broken 1.3.0 build must install this release manually once; later updates can install through Sparkle.
+
 # NOVA Copilot Version 1.3.0
 
 - Checks the signed GitHub-hosted Sparkle appcast once per day and includes a manual **Check for Updates…** menu item.

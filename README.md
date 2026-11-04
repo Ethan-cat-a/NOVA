@@ -4,14 +4,14 @@
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
   <p>
-    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.0.dmg"><strong>Download for macOS</strong></a>
+    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.1.dmg"><strong>Download for macOS</strong></a>
     &nbsp; · &nbsp;
     <a href="NOVA%20Copilot%20Windows/README.md"><strong>Get started on Windows</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.3.0-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.3.1-263C63?style=flat-square&logo=apple&logoColor=white" />
     <img alt="Windows" src="https://img.shields.io/badge/Windows-1.0.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
@@ -25,7 +25,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Version 1.3.0 · Native Swift / AppKit</strong></p>
+      <p><strong>Version 1.3.1 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with a menu-bar control, floating assistant panel and quick keyboard access.</p>
       <ul>
         <li>macOS 13 or later</li>
@@ -34,8 +34,8 @@
         <li>Local conversation history</li>
         <li>Daily update checks, with your approval before installation</li>
       </ul>
-      <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.0.dmg"><strong>↓ Download Mac DMG</strong></a></p>
-      <p><sub>Users on 1.2.0 need to install 1.3.0 manually once; later updates install in app.</sub></p>
+      <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.1.dmg"><strong>↓ Download Mac DMG</strong></a></p>
+      <p><sub>Users on 1.2.0 or the broken 1.3.0 build must install 1.3.1 manually once; later versions can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
     <td width="50%" valign="top">
@@ -119,6 +119,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for macOS — 1.3.1](CHANGELOG.md#nova-copilot-version-131)
 - [NOVA Copilot for macOS — 1.3.0](CHANGELOG.md#nova-copilot-version-130)
 - [NOVA Copilot for macOS — 1.2.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.2.0)
 - [NOVA Copilot for Windows — 1.0.0 release notes](NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.0.0.md)
