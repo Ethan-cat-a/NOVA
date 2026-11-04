@@ -348,7 +348,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model: chatModel,
             panelState: panelState,
             onHide: { [weak self] in self?.hidePanel() },
-            onQuit: { NSApp.terminate(nil) }
+            onQuit: { NSApp.terminate(nil) },
+            onCheckForUpdates: { [weak self] in self?.checkForUpdates() }
         ))
         placePanelAtRightEdgeIfNeeded()
     }

@@ -6,6 +6,7 @@ struct AssistantView: View {
     @ObservedObject var panelState: PanelState
     let onHide: () -> Void
     let onQuit: () -> Void
+    let onCheckForUpdates: () -> Void
 
     @FocusState private var inputFocused: Bool
     @StateObject private var viewState = AssistantViewState()
@@ -80,6 +81,22 @@ struct AssistantView: View {
             .buttonStyle(.plain)
             .help(panelState.isPinned ? "Unpin from top" : "Keep on top")
 
+            Button(action: onCheckForUpdates) {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Update")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(muted)
+                .padding(.horizontal, 8)
+                .frame(height: 29)
+                .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Check for Updates Now")
+            .help("Check for Updates Now")
+
             Menu {
                 Button { model.newChat() } label: { Label("New chat", systemImage: "plus.message") }
                 Divider()
@@ -96,6 +113,9 @@ struct AssistantView: View {
                 Divider()
                 Toggle("Keep on top", isOn: Binding(get: { panelState.isPinned }, set: { panelState.setPinned($0) }))
                 Toggle("Launch at Login", isOn: Binding(get: { panelState.launchAtLogin }, set: { panelState.setLaunchAtLogin($0) }))
+                Divider()
+                Button { runClipboardQuickAction(.summarize) } label: { Label("Summarize copied text", systemImage: "text.alignleft") }
+                Button { runClipboardQuickAction(.rewrite) } label: { Label("Rewrite copied text", systemImage: "pencil.line") }
                 Button { Task { await model.checkConnection() } } label: { Label("Check Nova connection", systemImage: "arrow.clockwise") }
                 Button { model.clearCurrentChat() } label: { Label("Clear current chat", systemImage: "trash") }
                 Divider()
@@ -188,10 +208,11 @@ struct AssistantView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             VStack(spacing: 8) {
-                starter("Summarize copied text", subtitle: "Use context from another app", icon: "doc.text") {
-                    if model.insertClipboardContext() { showNotice("Clipboard", message: "Copied text added to your draft.") }
-                    else { showNotice("Clipboard", message: "No text found. Copy some text in any app first.") }
-                    inputFocused = true
+                starter("Summarize copied text", subtitle: "Copy text first · runs immediately", icon: "text.alignleft") {
+                    runClipboardQuickAction(.summarize)
+                }
+                starter("Rewrite copied text", subtitle: "Keep the meaning, improve the wording", icon: "pencil.line") {
+                    runClipboardQuickAction(.rewrite)
                 }
                 starter("Help me write something", subtitle: "Email, essay, or a clear reply", icon: "pencil.line") {
                     model.input = "Help me write something. Ask any essential questions first, then draft it clearly."
@@ -240,6 +261,18 @@ struct AssistantView: View {
             .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+    }
+
+    private func runClipboardQuickAction(_ action: ClipboardQuickAction) {
+        if model.isSending {
+            showNotice("Nova is busy", message: "Wait for the current reply to finish, then try the quick action.")
+        } else if !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            showNotice("Draft in progress", message: "Send or clear your draft before running a quick action.")
+        } else if !model.runClipboardAction(action) {
+            showNotice("No copied text", message: "Copy text in another app first, then choose a quick action.")
+        } else {
+            inputFocused = true
+        }
     }
 
     private var composer: some View {

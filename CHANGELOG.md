@@ -1,3 +1,9 @@
+# NOVA Copilot Version 1.3.3
+
+- Adds one-click clipboard actions to summarize or rewrite copied text.
+- Keeps quick actions explicit: text is read from the clipboard only when an action is selected, and NOVA starts a separate chat when needed.
+- Adds a panel-header button for checking Sparkle updates immediately.
+
 # NOVA Copilot Version 1.3.2
 
 - Fixes launch failure by embedding the correct Frameworks runtime search path for Sparkle.

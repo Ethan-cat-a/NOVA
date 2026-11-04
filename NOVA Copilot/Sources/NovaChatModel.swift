@@ -78,6 +78,22 @@ final class NovaChatModel: ObservableObject {
         return true
     }
 
+    @discardableResult
+    func runClipboardAction(_ action: ClipboardQuickAction) -> Bool {
+        guard !isSending,
+              input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let copied = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !copied.isEmpty else {
+            return false
+        }
+
+        if !currentThread.messages.isEmpty { newChat() }
+        let clipped = String(copied.prefix(18000))
+        input = "\(action.prompt)\n\nCopied text:\n--- Begin copied text ---\n\(clipped)\n--- End copied text ---"
+        send()
+        return true
+    }
+
     func checkConnection() async {
         connectionStatus = "Checking Nova V8…"
         lastError = nil
