@@ -7,21 +7,15 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>NOVA Copilot software updates</description>
     <language>en</language>
     <item>
-      <title>Version 1.4.6</title>
-      <pubDate>Thu, 05 Nov 2026 12:29:48 GMT</pubDate>
-      <sparkle:version>15</sparkle:version>
-      <sparkle:shortVersionString>1.4.6</sparkle:shortVersionString>
+      <title>Version 1.4.7</title>
+      <pubDate>Thu, 05 Nov 2026 23:56:26 GMT</pubDate>
+      <sparkle:version>16</sparkle:version>
+      <sparkle:shortVersionString>1.4.7</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <description sparkle:descriptionFormat="plain-text"><![CDATA[
-- Render finished answers with readable Markdown and show code copy controls when you hover.
-- Search local chat history, and rename or delete conversations.
-- Keep streamed text simple, then format the complete answer when it finishes.
-]]></description>
-      <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.4.6/NOVA-Copilot-1.4.6.zip" length="4792608" type="application/octet-stream" sparkle:edSignature="r50L+IvLBbZwM5GH0odnhlMm7617u8rtn4ZQ4573+lUB3ExkxegQzPrD3LsNBKlsgsC7o9ThVks7KfKJO4+VDQ=="></enclosure>
+      <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.4.7/NOVA-Copilot-1.4.7.zip" length="4795507" type="application/octet-stream" sparkle:edSignature="lG2spIUAPWreTCzm65d59WspGnsZ0ZkLc9fIgcNpTqW4w470Vf2ZYTPONcnK0MzvWZwRaETI8Zn78puQfJRdCg=="></enclosure>
     </item>
   </channel>
-</rss>
-<!-- sparkle-signatures:
-edSignature: 2epMSjlWgO7C3TN4IwOJBPxDo0UsojzC3qtSfGXsWfh0axXOv/bzFcSiqxs8M5Om14lnNEmR+4q7y4tgr7/tCw==
-length: 1486
+</rss><!-- sparkle-signatures:
+edSignature: O3FFwhu4x3PX9uznSH8c96ar9DEbUCYiXs0E/YtvNesh0zw9c95clPVuwRJBVH/WqFCKpvm1nKc33/h2k6HuDw==
+length: 1162
 -->

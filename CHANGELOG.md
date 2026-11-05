@@ -1,3 +1,7 @@
+# NOVA Copilot Version 1.4.7 (2026-11-06)
+
+- Lightens the conversation canvas so it matches the normal panel background around messages.
+
 # NOVA Copilot for Windows Version 1.4.2 (2026-11-05)
 
 - Updates the Windows edition to the current 1.4.2 feature line.

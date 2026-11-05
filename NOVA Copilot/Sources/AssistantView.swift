@@ -383,7 +383,8 @@ struct AssistantView: View {
             }
             .onAppear { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
         }
-            .background(Color(nsColor: .underPageBackgroundColor))
+            // Keep the conversation canvas consistent with the rest of the panel.
+            .background(Color(nsColor: .windowBackgroundColor))
     }
 
     private var welcome: some View {
