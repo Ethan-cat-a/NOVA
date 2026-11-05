@@ -1,5 +1,10 @@
 .DS_Store
 DerivedData/
 build/
+NOVA Copilot Windows/dist/
+NOVA Copilot Windows/*.spec
+NOVA Copilot Windows/__pycache__/
+tests/**/__pycache__/
+NOVA-Copilot-Windows-*.zip
 *.xcuserstate
 xcuserdata/

@@ -1,0 +1,63 @@
+name: Build NOVA Copilot for Windows
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    if: startsWith(github.event.release.tag_name, 'windows-v')
+    runs-on: windows-latest
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install dependencies
+        run: python -m pip install -r "NOVA Copilot Windows/requirements.txt" "pyinstaller==6.22.3"
+
+      - name: Run Windows app tests
+        run: python -m unittest discover -s tests/windows -v
+
+      - name: Build Windows executable
+        working-directory: NOVA Copilot Windows
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "NOVA Copilot" --hidden-import pystray._win32 app.py
+
+      - name: Package downloadable app
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP "nova-windows-package"
+          $version = $env:RELEASE_TAG -replace '^windows-v', ''
+          $asset = "NOVA-Copilot-Windows-$version.zip"
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+          Copy-Item "NOVA Copilot Windows/dist/NOVA Copilot.exe" (Join-Path $package "NOVA Copilot.exe")
+          $instructions = @(
+            "NOVA Copilot for Windows $version",
+            "",
+            "Extract this ZIP and open NOVA Copilot.exe. Python is not required.",
+            "Windows SmartScreen may warn because this app is not code-signed.",
+            "Only run this file if it came from the official NOVA GitHub release."
+          )
+          $instructions | Set-Content -Encoding utf8 (Join-Path $package "README.txt")
+          Compress-Archive -Path (Join-Path $package "*") -DestinationPath (Join-Path $env:GITHUB_WORKSPACE $asset) -Force
+          "RELEASE_ASSET=$asset" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Upload app to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$env:RELEASE_TAG" "$env:RELEASE_ASSET" --clobber --repo "$env:GITHUB_REPOSITORY"

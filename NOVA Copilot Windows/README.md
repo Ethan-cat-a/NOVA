@@ -1,16 +1,18 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
+  <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot icon" />
   <h1>NOVA Copilot for Windows</h1>
   <p><strong>Your AI copilot on Windows 10 and 11.</strong></p>
-  <p><img alt="Windows version" src="https://img.shields.io/badge/version-1.0.0-2857C5?style=flat-square&logo=windows&logoColor=white" /> <img alt="ThinkPad support" src="https://img.shields.io/badge/Lenovo-ThinkPad-263C63?style=flat-square" /></p>
+  <p><img alt="Windows version" src="https://img.shields.io/badge/version-1.1.0-2857C5?style=flat-square&logo=windows&logoColor=white" /> <img alt="Lenovo ThinkBook support" src="https://img.shields.io/badge/Lenovo-ThinkBook-263C63?style=flat-square" /></p>
   <p>Standalone Windows edition · Python / Tkinter · NOVA V8 backend</p>
 </div>
 
 ---
 
-## Your NOVA assistant, on your PC
+## Download
 
-This is the independent Windows edition of NOVA Copilot. It is designed for Lenovo ThinkPad laptops and other Windows PCs. It is not the native macOS Swift application.
+Download the Windows package from the [NOVA Copilot Windows 1.1.0 release](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.1.0). Extract the ZIP and open **NOVA Copilot.exe**. Python is not required to run the packaged app.
+
+Windows may show a SmartScreen warning because this free build is not signed with a paid code-signing certificate. Choose **More info → Run anyway** only if you downloaded the package from the NOVA GitHub release above.
 
 ## Features
 
@@ -19,23 +21,16 @@ This is the independent Windows edition of NOVA Copilot. It is designed for Leno
 | Floating panel, right-edge launcher and **Ctrl + Shift + Space**. | Fast, Hard Thinker and Coding, with streamed replies. | System tray, Keep on Top and optional Launch at Login. |
 
 - Recent conversations and local chat history.
-- Clipboard text inserted only when you explicitly request it.
+- Clipboard text is inserted only when you explicitly choose the clipboard action.
+- Stops a response immediately in the interface, including while the connection is opening.
+- Updates streamed text in place so long conversations remain responsive.
 - Connects to the existing NOVA V8 chat backend.
 
-## Install and build on Windows
+## Build from source
 
-1. Download or clone this repository and open the **NOVA Copilot Windows** folder.
-2. Install **Python 3.10 or newer** from [python.org](https://www.python.org/downloads/windows/). Enable **Add Python to PATH** during setup.
-3. Double-click `build_windows.bat`.
-4. When the build finishes, open `dist\NOVA Copilot.exe`.
+To run from source, install Python 3.10 or newer from [python.org](https://www.python.org/downloads/windows/) and enable **Add Python to PATH** and the Python Launcher. Then run `run.bat`.
 
-To run from source without creating an executable, double-click `run.bat`.
-
-## Executable and signing status
-
-- The executable is generated locally by the build script; it is not prebuilt in the repository.
-- The source has passed a ZIP integrity check and Python syntax compilation, but has not yet been built or tested on a physical ThinkPad.
-- The generated executable is not signed with a publicly trusted code-signing certificate. Windows SmartScreen may show a warning.
+To build your own executable, run `build_windows.bat`. The script installs the pinned project dependencies and creates `dist\NOVA Copilot.exe`.
 
 ## Privacy and backend
 
@@ -44,14 +39,7 @@ To run from source without creating an executable, double-click `run.bat`.
 - Conversation history is stored locally at `%LOCALAPPDATA%\NOVA Copilot\threads.json`.
 - Clipboard contents are read only when you explicitly use the clipboard action.
 
-## Source files
-
-- `app.py` — Windows desktop assistant.
-- `requirements.txt` — Python dependencies.
-- `build_windows.bat` — create the Windows executable.
-- `run.bat` — run from source.
-
-See [Windows 1.0.0 release notes](RELEASE_NOTES_v1.0.0.md).
+See the [1.1.0 release notes](RELEASE_NOTES_v1.1.0.md) and [1.0.0 release notes](RELEASE_NOTES_v1.0.0.md).
 
 ---
 

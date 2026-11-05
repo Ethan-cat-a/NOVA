@@ -12,7 +12,7 @@
   </p>
   <p>
     <img alt="macOS" src="https://img.shields.io/badge/macOS-1.4.2-263C63?style=flat-square&logo=apple&logoColor=white" />
-    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.0.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
+    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.1.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
 </div>
@@ -44,21 +44,21 @@
     </td>
     <td width="50%" valign="top">
       <h3>⊞ &nbsp; NOVA Copilot for Windows</h3>
-      <p><strong>Version 1.0.0 · Python / Tkinter</strong></p>
-      <p>A separate Windows edition for Lenovo ThinkPad and other Windows laptops and desktops.</p>
+      <p><strong>Version 1.1.0 · Python / Tkinter</strong></p>
+      <p>A separate Windows edition for Lenovo ThinkBook, ThinkPad and other Windows PCs.</p>
       <ul>
         <li>Windows 10 or Windows 11</li>
         <li>Lenovo ThinkPad and compatible PCs</li>
         <li>Shortcut: <code>Ctrl + Shift + Space</code></li>
         <li>System tray and floating panel</li>
       </ul>
-      <p><a href="NOVA%20Copilot%20Windows/"> <strong>Explore Windows source</strong></a></p>
-      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.0.0.md">Release notes</a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.1.0/NOVA-Copilot-Windows-1.1.0.zip"><strong>↓ Download Windows app ZIP · 1.1.0</strong></a></p>
+      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.1.0.md">Release notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
     </td>
   </tr>
 </table>
 
-> **Important:** The Windows edition is a source distribution, not a prebuilt installer. Build it on Windows using the included `build_windows.bat` script and Python 3.10 or later. The generated `NOVA Copilot.exe` is not yet signed with a publicly trusted certificate or verified on a physical ThinkPad.
+> **Windows install:** Download the Windows 1.1.0 ZIP above, extract it and open `NOVA Copilot.exe`. The app is not signed with a paid code-signing certificate, so Windows SmartScreen may show a warning. The release is built and smoke-tested on GitHub Actions; a physical ThinkBook has not yet been tested.
 
 ## The essentials
 
@@ -135,6 +135,8 @@ NOVA/
 - [NOVA Copilot for macOS — 1.3.1](CHANGELOG.md#nova-copilot-version-131)
 - [NOVA Copilot for macOS — 1.3.0](CHANGELOG.md#nova-copilot-version-130)
 - [NOVA Copilot for macOS — 1.2.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.2.0)
+- [NOVA Copilot for Windows — 1.1.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.1.0)
+- [NOVA Copilot for Windows — 1.1.0 release notes](NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.1.0.md)
 - [NOVA Copilot for Windows — 1.0.0 release notes](NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.0.0.md)
 
 ---

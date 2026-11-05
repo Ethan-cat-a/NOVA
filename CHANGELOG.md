@@ -1,3 +1,10 @@
+# NOVA Copilot for Windows Version 1.1.0 (2026-11-05)
+
+- Adds a self-contained Windows release package built for download.
+- Makes Stop release the UI immediately while a cancelled connection finishes winding down.
+- Updates streamed responses in place, preserving scroll position and avoiding full conversation redraws.
+- Adds cancellation, UTF-8 streaming and incremental-rendering tests.
+
 # NOVA Copilot Version 1.4.2 (2026-11-05)
 
 - Shows a clear thinking or writing indicator while NOVA streams a response, with a labeled Stop button.

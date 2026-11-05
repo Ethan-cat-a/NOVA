@@ -26,7 +26,7 @@ except Exception:  # Tray support is optional when running directly from source.
     Image = ImageDraw = ImageFont = None
 
 APP_NAME = "NOVA Copilot"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 CHAT_URL = "https://nova-v8.vercel.app/api/chat"
 HOTKEY_LABEL = "Ctrl + Shift + Space"
 
@@ -53,6 +53,46 @@ MODE_INSTRUCTIONS = {
     "Hard Thinker": "Take extra time to analyze the task carefully. Check assumptions, reason through important steps, consider alternatives and edge cases, and verify calculations when possible. Present the conclusion and key rationale clearly without exposing private chain-of-thought.",
     "Coding": "Act as a senior software engineer. Provide practical, runnable code when appropriate, with sensible defaults, clear structure, and robust error handling. For debugging, identify the likely root cause and give corrected code. Include concise setup or usage notes and avoid pseudocode unless requested.",
 }
+
+
+class ActiveRequest:
+    """Tracks one network request and safely closes its response on cancel."""
+
+    def __init__(self, message_id: str):
+        self.message_id = message_id
+        self.cancelled = threading.Event()
+        self._lock = threading.Lock()
+        self._response = None
+
+    def attach_response(self, response: Any) -> bool:
+        with self._lock:
+            cancelled = self.cancelled.is_set()
+            if not cancelled:
+                self._response = response
+        if cancelled:
+            self._close(response)
+            return False
+        return True
+
+    def clear_response(self, response: Any) -> None:
+        with self._lock:
+            if self._response is response:
+                self._response = None
+
+    def cancel(self) -> None:
+        self.cancelled.set()
+        with self._lock:
+            response = self._response
+            self._response = None
+        if response is not None:
+            self._close(response)
+
+    @staticmethod
+    def _close(response: Any) -> None:
+        try:
+            response.close()
+        except Exception:
+            pass
 
 
 def app_data_dir() -> Path:
@@ -170,8 +210,7 @@ class NovaCopilotApp:
         self.threads = load_threads()
         self.active_thread_id = self.threads[0]["id"]
         self.is_sending = False
-        self.request_cancel = threading.Event()
-        self.active_response = None
+        self.active_request: ActiveRequest | None = None
         self.events: queue.Queue[tuple[str, Any]] = queue.Queue()
         self.hotkey_events: queue.Queue[str] = queue.Queue()
         self.hotkey = WindowsHotkey(self.hotkey_events)
@@ -185,6 +224,7 @@ class NovaCopilotApp:
         self.edge_window: tk.Toplevel | None = None
         self._closing = False
         self._last_save = 0.0
+        self.message_labels: dict[str, tk.Label] = {}
 
         self._configure_styles()
         self._build_ui()
@@ -480,7 +520,8 @@ class NovaCopilotApp:
         thread["updated_at"] = utc_now()
         self.input_text.delete("1.0", "end")
         self.is_sending = True
-        self.request_cancel = threading.Event()
+        request_control = ActiveRequest(self.response_message_id)
+        self.active_request = request_control
         self.send_button.configure(text="■", bg="#596579")
         self.status_label.configure(text="Nova is thinking…")
         self.status_dot.configure(fg=ORANGE)
@@ -499,9 +540,9 @@ class NovaCopilotApp:
             ),
         }]
         api_messages.extend({"role": m["role"], "content": m["content"]} for m in thread["messages"][:-1][-10:])
-        threading.Thread(target=self._stream_reply, args=(thread_id, self.response_message_id, api_messages, self.request_cancel), daemon=True).start()
+        threading.Thread(target=self._stream_reply, args=(thread_id, self.response_message_id, api_messages, request_control), daemon=True).start()
 
-    def _stream_reply(self, thread_id: str, message_id: str, messages: list[dict[str, str]], cancel: threading.Event) -> None:
+    def _stream_reply(self, thread_id: str, message_id: str, messages: list[dict[str, str]], request_control: ActiveRequest) -> None:
         request = urllib.request.Request(
             CHAT_URL,
             data=json.dumps({"messages": messages}, ensure_ascii=False).encode("utf-8"),
@@ -511,9 +552,11 @@ class NovaCopilotApp:
         response = None
         try:
             response = urllib.request.urlopen(request, timeout=180)
-            self.active_response = response
+            if not request_control.attach_response(response):
+                self.events.put(("finished", (thread_id, message_id, None, True)))
+                return
             decoder = __import__("codecs").getincrementaldecoder("utf-8")("replace")
-            while not cancel.is_set():
+            while not request_control.cancelled.is_set():
                 chunk = response.read1(1024) if hasattr(response, "read1") else response.read(1024)
                 if not chunk:
                     break
@@ -523,35 +566,44 @@ class NovaCopilotApp:
             tail = decoder.decode(b"", final=True)
             if tail:
                 self.events.put(("delta", (thread_id, message_id, tail)))
-            self.events.put(("finished", (thread_id, message_id, None, cancel.is_set())))
+            self.events.put(("finished", (thread_id, message_id, None, request_control.cancelled.is_set())))
         except urllib.error.HTTPError as exc:
+            if request_control.cancelled.is_set():
+                self.events.put(("finished", (thread_id, message_id, None, True)))
+            else:
+                try:
+                    detail = exc.read(8192).decode("utf-8", "replace").strip()
+                except Exception:
+                    detail = ""
+                self.events.put(("finished", (thread_id, message_id, f"Nova V8 request failed (HTTP {exc.code}): {detail[:450]}", False)))
             try:
-                detail = exc.read(8192).decode("utf-8", "replace").strip()
+                exc.close()
             except Exception:
-                detail = ""
-            self.events.put(("finished", (thread_id, message_id, f"Nova V8 request failed (HTTP {exc.code}): {detail[:450]}", False)))
+                pass
         except Exception as exc:
-            if cancel.is_set():
+            if request_control.cancelled.is_set():
                 self.events.put(("finished", (thread_id, message_id, None, True)))
             else:
                 self.events.put(("finished", (thread_id, message_id, f"Connection error: {exc}", False)))
         finally:
+            if response is not None:
+                request_control.clear_response(response)
             try:
                 if response:
                     response.close()
             except Exception:
                 pass
-            self.active_response = None
 
     def stop_response(self) -> None:
-        self.request_cancel.set()
-        try:
-            if self.active_response:
-                self.active_response.close()
-        except Exception:
-            pass
-        self.send_button.configure(text="…", bg="#596579")
-        self.status_label.configure(text="Stopping response…")
+        request_control = self.active_request
+        if request_control is None:
+            return
+        self.active_request = None
+        request_control.cancel()
+        self.is_sending = False
+        self.send_button.configure(text="↑", bg=ACCENT)
+        self.status_label.configure(text=self.connection_status if self.connected else "Response stopped")
+        self.status_dot.configure(fg=GREEN if self.connected else ORANGE)
 
     def _find_message(self, thread_id: str, message_id: str) -> dict[str, Any] | None:
         for thread in self.threads:
@@ -564,7 +616,7 @@ class NovaCopilotApp:
     def _poll_events(self) -> None:
         if self._closing:
             return
-        changed = False
+        changed_messages: set[tuple[str, str]] = set()
         try:
             while True:
                 kind, payload = self.events.get_nowait()
@@ -578,7 +630,7 @@ class NovaCopilotApp:
                     if message is not None:
                         message["content"] += delta
                         if thread_id == self.active_thread_id:
-                            changed = True
+                            changed_messages.add((thread_id, message_id))
                         if time.monotonic() - self._last_save > 1.0:
                             self._save()
                             self._last_save = time.monotonic()
@@ -590,17 +642,38 @@ class NovaCopilotApp:
                             message["content"] = (message["content"] + "\n\nConnection note: " if message["content"] else "Nova V8 error: ") + error
                         elif not message["content"]:
                             message["content"] = "Response stopped." if was_cancelled else "No response received."
-                    self.is_sending = False
-                    self.send_button.configure(text="↑", bg=ACCENT)
-                    self.status_label.configure(text="Nova V8 connected" if not error else "Request failed")
-                    self.status_dot.configure(fg=GREEN if not error else ORANGE)
+                        if thread_id == self.active_thread_id:
+                            changed_messages.add((thread_id, message_id))
+                    if self.active_request and self.active_request.message_id == message_id:
+                        self.active_request = None
+                        self.is_sending = False
+                        self.send_button.configure(text="↑", bg=ACCENT)
+                        self.status_label.configure(text="Request failed" if error else "Nova V8 connected")
+                        self.status_dot.configure(fg=ORANGE if error else GREEN)
                     self._save()
-                    changed = True
         except queue.Empty:
             pass
-        if changed:
-            self._render_conversation()
+        for thread_id, message_id in changed_messages:
+            self._update_streamed_message(thread_id, message_id)
         self.root.after(100, self._poll_events)
+
+    def _update_streamed_message(self, thread_id: str, message_id: str) -> None:
+        if thread_id != self.active_thread_id:
+            return
+        message = self._find_message(thread_id, message_id)
+        label = self.message_labels.get(message_id)
+        if message is None or label is None:
+            return
+
+        try:
+            was_at_bottom = self.canvas.yview()[1] >= 0.98
+            label.configure(text=message.get("content") or "Thinking…")
+            self.messages_frame.update_idletasks()
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            if was_at_bottom:
+                self.canvas.yview_moveto(1.0)
+        except tk.TclError:
+            pass
 
     def _poll_hotkey(self) -> None:
         if self._closing:
@@ -640,6 +713,7 @@ class NovaCopilotApp:
             self.events.put(("health", (False, f"Connection unavailable: {exc}")))
 
     def _render_conversation(self) -> None:
+        self.message_labels.clear()
         for child in self.messages_frame.winfo_children():
             child.destroy()
         messages = self.current_thread.get("messages", [])
@@ -705,8 +779,21 @@ class NovaCopilotApp:
                 content = "Thinking…"
             label = tk.Label(wrapper, text=content, bg=WHITE, fg=INK, justify="left", anchor="w", wraplength=315, font=("Segoe UI", 9))
             label.pack(anchor="w", fill="x")
-            label.bind("<Button-3>", lambda e, txt=message.get("content", ""): self._copy_text(txt))
-            wrapper.bind("<Button-3>", lambda e, txt=message.get("content", ""): self._copy_text(txt))
+            message_id = message.get("id")
+            if message_id:
+                self.message_labels[message_id] = label
+                label.bind("<Button-3>", lambda _e, mid=message_id: self._copy_message(mid))
+                wrapper.bind("<Button-3>", lambda _e, mid=message_id: self._copy_message(mid))
+            else:
+                label.bind("<Button-3>", lambda _e, txt=message.get("content", ""): self._copy_text(txt))
+                wrapper.bind("<Button-3>", lambda _e, txt=message.get("content", ""): self._copy_text(txt))
+
+    def _copy_message(self, message_id: str) -> None:
+        for thread in self.threads:
+            for message in thread.get("messages", []):
+                if message.get("id") == message_id:
+                    self._copy_text(message.get("content", ""))
+                    return
 
     def _copy_text(self, text: str) -> None:
         if not text:
@@ -807,13 +894,11 @@ class NovaCopilotApp:
         if self._closing:
             return
         self._closing = True
-        self.request_cancel.set()
+        request_control = self.active_request
+        self.active_request = None
+        if request_control is not None:
+            request_control.cancel()
         self.hotkey.stop()
-        try:
-            if self.active_response:
-                self.active_response.close()
-        except Exception:
-            pass
         try:
             if self.tray_icon:
                 self.tray_icon.stop()
