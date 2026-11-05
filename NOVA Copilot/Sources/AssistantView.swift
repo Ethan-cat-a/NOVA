@@ -13,11 +13,16 @@ struct AssistantView: View {
 
     @FocusState private var inputFocused: Bool
     @State private var showsUpdateNotes = false
+    @State private var showsChatHistory = false
+    @State private var historySearchText = ""
+    @State private var renameRequest: ChatThread?
+    @State private var renameTitle = ""
+    @State private var deleteRequest: ChatThread?
     @StateObject private var viewState = AssistantViewState()
 
     private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
-    private let ink = Color(red: 0.09, green: 0.13, blue: 0.20)
-    private let muted = Color(red: 0.40, green: 0.45, blue: 0.54)
+    private let ink = Color.primary
+    private let muted = Color.secondary
 
     var body: some View {
         VStack(spacing: 0) {
@@ -53,20 +58,19 @@ struct AssistantView: View {
                 .padding(.vertical, 7)
                 .background((updateStatus.isError ? Color.orange : accent).opacity(0.07))
             }
-            Divider().overlay(Color(red: 0.89, green: 0.91, blue: 0.94))
+            Divider()
             modeBar
-            Divider().overlay(Color(red: 0.92, green: 0.93, blue: 0.95))
+            Divider()
             conversation
             composer
         }
         .frame(minWidth: 370, minHeight: 500)
-        .background(Color(red: 0.975, green: 0.980, blue: 0.988))
-        .preferredColorScheme(.light)
+        .background(Color(nsColor: .windowBackgroundColor))
         .onExitCommand(perform: onHide)
         .fileImporter(
             isPresented: $viewState.showsContextImporter,
             allowedContentTypes: [.image, .pdf] + WordDocument.importTypes,
-            allowsMultipleSelection: false,
+            allowsMultipleSelection: true,
             onCompletion: handleContextImport
         )
         .onDrop(of: [UTType.fileURL.identifier], isTargeted: $viewState.isTargetingContext, perform: handleContextDrop)
@@ -79,6 +83,9 @@ struct AssistantView: View {
         }
         .onChange(of: model.currentThread.messages.count) { count in
             if count > 0 { viewState.dismissFirstRunTip() }
+        }
+        .onChange(of: viewState.contextReview?.id) { id in
+            if id == nil { processNextContextFile() }
         }
         .alert(Text(viewState.alertTitle), isPresented: $viewState.showAlert) {
             if model.canRetryLastRequest {
@@ -121,7 +128,7 @@ struct AssistantView: View {
                 attachment: attachment,
                 onCancel: { viewState.contextReview = nil },
                 onUse: {
-                    viewState.contextAttachment = attachment
+                    viewState.contextAttachments.append(attachment)
                     viewState.contextReview = nil
                     inputFocused = true
                 }
@@ -145,7 +152,7 @@ struct AssistantView: View {
                 .scaledToFill()
                 .frame(width: 36, height: 36)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.black.opacity(0.08), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -188,12 +195,68 @@ struct AssistantView: View {
                 .foregroundStyle(muted)
                 .padding(.horizontal, 8)
                 .frame(height: 29)
-                .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
             .disabled(updateStatus.isChecking)
             .accessibilityLabel("Check for Updates Now")
             .help(updateStatus.message ?? "Check for Updates Now")
+
+            Button { showsChatHistory = true } label: {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(muted)
+                    .frame(width: 29, height: 29)
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Search chat history")
+            .help("Search, rename or delete saved chats")
+            .popover(isPresented: $showsChatHistory, arrowEdge: .top) {
+                ChatHistoryPopover(
+                    model: model,
+                    searchText: $historySearchText,
+                    onSelect: { thread in
+                        model.switchThread(thread.id)
+                        showsChatHistory = false
+                    },
+                    onRename: { thread in
+                        renameTitle = thread.title
+                        renameRequest = thread
+                        showsChatHistory = false
+                    },
+                    onDelete: { thread in
+                        deleteRequest = thread
+                        showsChatHistory = false
+                    }
+                )
+            }
+            .alert("Rename chat", isPresented: Binding(
+                get: { renameRequest != nil },
+                set: { if !$0 { renameRequest = nil } }
+            )) {
+                TextField("Chat name", text: $renameTitle)
+                Button("Cancel", role: .cancel) { renameRequest = nil }
+                Button("Save") {
+                    if let renameRequest { model.renameThread(renameRequest.id, to: renameTitle) }
+                    renameRequest = nil
+                }
+                .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } message: {
+                Text("Give this conversation a short name. It stays on this Mac.")
+            }
+            .confirmationDialog("Delete this chat?", isPresented: Binding(
+                get: { deleteRequest != nil },
+                set: { if !$0 { deleteRequest = nil } }
+            ), titleVisibility: .visible) {
+                Button("Delete Chat", role: .destructive) {
+                    if let deleteRequest { model.deleteThread(deleteRequest.id) }
+                    deleteRequest = nil
+                }
+                Button("Cancel", role: .cancel) { deleteRequest = nil }
+            } message: {
+                Text("\(deleteRequest?.title ?? "This chat") and its messages will be removed from this Mac.")
+            }
 
             Menu {
                 Button { model.newChat() } label: { Label("New chat", systemImage: "plus.message") }
@@ -225,7 +288,7 @@ struct AssistantView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(muted)
                     .frame(width: 29, height: 29)
-                    .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
             }
             .menuStyle(.borderlessButton)
             .help("More options and chat history")
@@ -235,14 +298,14 @@ struct AssistantView: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(muted)
                     .frame(width: 27, height: 27)
-                    .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
             .help("Hide (⌘⇧Space to reopen)")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.white.opacity(0.97))
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.97))
     }
 
     private var modeBar: some View {
@@ -262,10 +325,10 @@ struct AssistantView: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "doc.text")
                         .foregroundStyle(accent)
-                    Text("Create a document or add one to fill with details in this message. Saved files contain text only; formatting and images aren’t retained.")
+                    Text("Create a document or fill one with details. New files format headings, lists, bold and italics; original layouts, tables and images aren’t retained.")
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
-                    Button("Add Word…") { viewState.showsContextImporter = true }
+                    Button("Add files…") { viewState.showsContextImporter = true }
                         .buttonStyle(.plain)
                         .fontWeight(.semibold)
                         .foregroundStyle(accent)
@@ -276,7 +339,7 @@ struct AssistantView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
-        .background(Color.white)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     private var conversation: some View {
@@ -293,6 +356,7 @@ struct AssistantView: View {
                                 isStreaming: model.streamingMessageID == message.id,
                                 canRetry: model.canRetryResponse(message.id),
                                 onCopy: { copyResponse(message.content) },
+                                onCopyCode: { copyCodeBlock($0) },
                                 onRetry: { model.retryResponse(message.id) },
                                 onSaveWord: { viewState.wordDraftReview = WordDraftReview(text: message.content) }
                             )
@@ -319,7 +383,7 @@ struct AssistantView: View {
             }
             .onAppear { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
         }
-        .background(Color(red: 0.975, green: 0.980, blue: 0.988))
+            .background(Color(nsColor: .underPageBackgroundColor))
     }
 
     private var welcome: some View {
@@ -415,8 +479,8 @@ struct AssistantView: View {
             }
         }
         .padding(10)
-        .background(.white, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red: 0.89, green: 0.91, blue: 0.94), lineWidth: 1))
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
     }
 
     private func starter(_ title: String, subtitle: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -435,8 +499,8 @@ struct AssistantView: View {
                 Image(systemName: "arrow.up.left").font(.system(size: 10, weight: .semibold)).foregroundStyle(muted.opacity(0.75))
             }
             .padding(9)
-            .background(.white, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red: 0.89, green: 0.91, blue: 0.94), lineWidth: 1))
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
             .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
@@ -445,8 +509,13 @@ struct AssistantView: View {
     private func runClipboardQuickAction(_ action: ClipboardQuickAction) {
         if model.isSending {
             showFeedback("Finish the current reply before starting a clipboard action.", isError: true)
-        } else if viewState.contextAttachment != nil {
-            showFeedback("Send or remove the reviewed attachment before starting a clipboard action.", isError: true)
+        } else if (
+            !viewState.contextAttachments.isEmpty
+                || viewState.contextReview != nil
+                || !viewState.pendingContextURLs.isEmpty
+                || viewState.isExtractingContext
+        ) {
+            showFeedback("Finish reviewing or remove the attached files before starting a clipboard action.", isError: true)
         } else if !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             showFeedback("Send or clear your draft before starting a clipboard action.", isError: true)
         } else if let snapshot = model.clipboardTextSnapshot() {
@@ -459,56 +528,93 @@ struct AssistantView: View {
     private func handleContextImport(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
-            guard let url = urls.first else { return }
-            importContextFile(url)
+            importContextFiles(urls)
         case .failure(let error):
             showFeedback("Couldn’t open that file: \(error.localizedDescription)", isError: true)
         }
     }
 
     private func handleContextDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard !providers.isEmpty else { return false }
-        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else {
+        let fileProviders = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }
+        guard !fileProviders.isEmpty else {
             showFeedback("Drop an image, PDF or Word document to add context.", isError: true)
             return false
         }
 
-        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, error in
-            let droppedURL: URL?
-            if let url = item as? URL {
-                droppedURL = url
-            } else if let url = item as? NSURL {
-                droppedURL = url as URL
-            } else if let data = item as? Data,
-                      let string = String(data: data, encoding: .utf8) {
-                droppedURL = URL(string: string.trimmingCharacters(in: .whitespacesAndNewlines))
-            } else {
-                droppedURL = nil
-            }
-            DispatchQueue.main.async {
-                if let droppedURL {
-                    importContextFile(droppedURL)
+        let group = DispatchGroup()
+        let lock = NSLock()
+        var droppedURLs = [URL?](repeating: nil, count: fileProviders.count)
+        for (index, provider) in fileProviders.enumerated() {
+            group.enter()
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                let url: URL?
+                if let value = item as? URL {
+                    url = value
+                } else if let value = item as? NSURL {
+                    url = value as URL
+                } else if let data = item as? Data,
+                          let string = String(data: data, encoding: .utf8) {
+                    url = URL(string: string.trimmingCharacters(in: .whitespacesAndNewlines))
                 } else {
-                    showFeedback("Couldn’t read that dropped file. Try choosing it with the paperclip menu.", isError: true)
+                    url = nil
                 }
+                lock.lock()
+                droppedURLs[index] = url
+                lock.unlock()
+                group.leave()
+            }
+        }
+        group.notify(queue: .main) {
+            let urls = droppedURLs.compactMap { $0 }
+            if urls.isEmpty {
+                showFeedback("Couldn’t read those dropped files. Try choosing them with the paperclip menu.", isError: true)
+            } else {
+                if urls.count < fileProviders.count {
+                    showFeedback("Some dropped files couldn’t be read.", isError: true)
+                }
+                importContextFiles(urls)
             }
         }
         return true
     }
 
-    private func importContextFile(_ url: URL) {
+    private func importContextFiles(_ urls: [URL]) {
         guard !model.isSending else {
             showFeedback("Wait for the current reply to finish before adding context.", isError: true)
             return
         }
-        viewState.contextAttachment = nil
+        let occupiedSlots = viewState.contextAttachments.count
+            + viewState.pendingContextURLs.count
+            + (viewState.contextReview == nil ? 0 : 1)
+            + (viewState.isExtractingContext ? 1 : 0)
+        let remainingSlots = max(0, 5 - occupiedSlots)
+        guard remainingSlots > 0 else {
+            showFeedback("You can add up to 5 files to one message. Remove a file to add another.", isError: true)
+            return
+        }
+        let acceptedURLs = Array(urls.prefix(remainingSlots))
+        if acceptedURLs.count < urls.count {
+            showFeedback("NOVA can review up to 5 files for one message. The extra files were skipped.", isError: true)
+        }
+        viewState.pendingContextURLs.append(contentsOf: acceptedURLs)
+        processNextContextFile()
+    }
+
+    private func processNextContextFile() {
+        guard !viewState.isExtractingContext,
+              viewState.contextReview == nil,
+              !viewState.pendingContextURLs.isEmpty else { return }
+        let url = viewState.pendingContextURLs.removeFirst()
         viewState.isExtractingContext = true
         Task {
-            defer { viewState.isExtractingContext = false }
             do {
-                viewState.contextReview = try await ContextTextExtractor.readFile(at: url)
+                let attachment = try await ContextTextExtractor.readFile(at: url)
+                viewState.isExtractingContext = false
+                viewState.contextReview = attachment
             } catch {
+                viewState.isExtractingContext = false
                 showFeedback(error.localizedDescription, isError: true)
+                processNextContextFile()
             }
         }
     }
@@ -546,13 +652,18 @@ struct AssistantView: View {
             model.send()
             return
         }
-        let attachment = viewState.contextAttachment
-        if model.currentMode == .wordDocument, attachment?.wasTruncated == true {
+        let attachments = viewState.contextAttachments
+        let wordDocuments = attachments.filter { $0.kind == .word }
+        if model.currentMode == .wordDocument, wordDocuments.count > 1 {
+            showFeedback("Word Doc mode can fill one Word document at a time. Keep one Word file attached and use the other files as references.", isError: true)
+            return
+        }
+        if model.currentMode == .wordDocument, wordDocuments.first?.wasTruncated == true {
             showFeedback("This document is too long to fill safely. Try a shorter document or ask about it in another mode.", isError: true)
             return
         }
-        model.send(contextAttachment: attachment)
-        if attachment != nil { viewState.contextAttachment = nil }
+        model.send(contextAttachments: attachments)
+        if !attachments.isEmpty { viewState.contextAttachments = [] }
     }
 
     private func copyResponse(_ content: String) {
@@ -561,48 +672,43 @@ struct AssistantView: View {
         showFeedback("Copied NOVA’s response.")
     }
 
-    @ViewBuilder
-    private func contextAttachmentCard(_ attachment: ContextAttachment) -> some View {
-        HStack(spacing: 8) {
-            if let data = attachment.previewData, let image = NSImage(data: data) {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 38, height: 38)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
-            } else {
-                Image(systemName: attachment.kind.icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .frame(width: 38, height: 38)
-                    .background(accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(attachment.name)
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(ink)
-                    .lineLimit(1)
-                Text("\(attachment.kind.label) · \(attachment.extractedText.count.formatted()) characters ready")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(muted)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-            Button("Review") { viewState.contextReview = attachment }
-                .buttonStyle(.plain)
+    private func copyCodeBlock(_ content: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(content, forType: .string)
+        showFeedback("Copied code block.")
+    }
+
+    private func contextAttachmentChip(_ attachment: ContextAttachment) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: attachment.kind.icon)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(accent)
-            Button { viewState.contextAttachment = nil } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(muted)
+            Text(attachment.name)
+                .font(.system(size: 9.5, weight: .medium))
+                .lineLimit(1)
+                .frame(maxWidth: 110)
+            Button { viewState.contextReview = attachment } label: {
+                Image(systemName: "eye")
+                    .font(.system(size: 9, weight: .semibold))
             }
             .buttonStyle(.plain)
-            .help("Remove context")
+            .foregroundStyle(muted)
+            .help("Review extracted text")
+            Button {
+                viewState.contextAttachments.removeAll { $0.id == attachment.id }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(muted)
+            .help("Remove \(attachment.name)")
         }
-        .padding(7)
-        .background(Color(red: 0.975, green: 0.980, blue: 0.988), in: RoundedRectangle(cornerRadius: 9))
-        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color(red: 0.89, green: 0.91, blue: 0.94), lineWidth: 1))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color(nsColor: .controlBackgroundColor), in: Capsule())
+        .overlay(Capsule().stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+        .help("\(attachment.kind.label) · \(attachment.extractedText.count.formatted()) characters extracted. Review or remove this file.")
     }
 
     private func showFeedback(_ message: String, isError: Bool = false) {
@@ -686,16 +792,18 @@ struct AssistantView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(muted)
                         .frame(width: 32, height: 38)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(red: 0.87, green: 0.89, blue: 0.93), lineWidth: 1))
+                        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
                 }
                 .menuStyle(.borderlessButton)
-                .help("Add an image, PDF, Word document, screenshot, or copied text")
+                .help("Add up to 5 images, PDFs or Word documents, capture a screen, or add copied text")
 
                 TextField(
-                    viewState.contextAttachment == nil
+                    viewState.contextAttachments.isEmpty
                         ? (model.currentMode == .wordDocument ? "Describe your Word document…" : "Message Nova V8…")
-                        : (model.currentMode == .wordDocument ? "How should NOVA fill this document?" : "Ask about this context…"),
+                        : (model.currentMode == .wordDocument && viewState.contextAttachments.contains(where: { $0.kind == .word })
+                           ? "How should NOVA fill this document?"
+                           : "Ask about these files…"),
                     text: $model.input,
                     axis: .vertical
                 )
@@ -707,8 +815,8 @@ struct AssistantView: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .frame(minHeight: 38)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 11))
-                    .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(red: 0.84, green: 0.87, blue: 0.92), lineWidth: 1))
+                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 11))
+                    .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
 
                 Button { sendMessage() } label: {
                     HStack(spacing: 5) {
@@ -716,7 +824,7 @@ struct AssistantView: View {
                         if model.isSending {
                             Text("Stop")
                         } else if model.currentMode == .wordDocument {
-                            Text(viewState.contextAttachment?.kind == .word ? "Fill" : "Create")
+                            Text(viewState.contextAttachments.contains(where: { $0.kind == .word }) ? "Fill" : "Create")
                         }
                     }
                     .font(.system(size: 11, weight: .bold))
@@ -727,8 +835,8 @@ struct AssistantView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return, modifiers: .command)
-                .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil)
-                .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil ? 0.55 : 1)
+                .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty)
+                .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty ? 0.55 : 1)
                 .accessibilityLabel(model.isSending ? "Stop response" : "Send message")
                 .help(model.isSending ? "Stop response" : (model.currentMode == .wordDocument ? "Create or fill a Word document (⌘Return)" : "Send message (⌘Return)"))
             }
@@ -740,11 +848,29 @@ struct AssistantView: View {
                 }
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(muted)
-            } else if let attachment = viewState.contextAttachment {
-                contextAttachmentCard(attachment)
+            }
+            if !viewState.contextAttachments.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(viewState.contextAttachments) { attachment in
+                            contextAttachmentChip(attachment)
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
+                .accessibilityLabel("Reviewed files attached to this message")
+            }
+            if !viewState.pendingContextURLs.isEmpty {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small).scaleEffect(0.72)
+                    Text("\(viewState.pendingContextURLs.count) more file\(viewState.pendingContextURLs.count == 1 ? "" : "s") waiting for review")
+                    Spacer(minLength: 0)
+                }
+                .font(.system(size: 9.5, weight: .medium))
+                .foregroundStyle(muted)
             }
             if viewState.isTargetingContext {
-                Text("Drop an image, PDF or Word document to review its text")
+                Text("Drop up to 5 images, PDFs or Word documents to review their text")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(accent)
                     .frame(maxWidth: .infinity)
@@ -764,8 +890,8 @@ struct AssistantView: View {
         .padding(.horizontal, 13)
         .padding(.top, 11)
         .padding(.bottom, 11)
-        .background(.white)
-        .overlay(alignment: .top) { Rectangle().fill(Color(red: 0.89, green: 0.91, blue: 0.94)).frame(height: 1) }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .overlay(alignment: .top) { Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 1) }
     }
 }
 
@@ -784,7 +910,8 @@ private final class AssistantViewState: ObservableObject {
     @Published var showMoreExamples = false
     @Published var showsContextImporter = false
     @Published var contextReview: ContextAttachment?
-    @Published var contextAttachment: ContextAttachment?
+    @Published var contextAttachments: [ContextAttachment] = []
+    @Published var pendingContextURLs: [URL] = []
     @Published var wordDraftReview: WordDraftReview?
     @Published var isExtractingContext = false
     @Published var isTargetingContext = false
@@ -810,13 +937,175 @@ private final class AssistantViewState: ObservableObject {
     }
 }
 
+private struct ChatHistoryPopover: View {
+    @ObservedObject var model: NovaChatModel
+    @Binding var searchText: String
+    let onSelect: (ChatThread) -> Void
+    let onRename: (ChatThread) -> Void
+    let onDelete: (ChatThread) -> Void
+
+    private var matchingThreads: [ChatThread] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return model.threads }
+        return model.threads.filter { thread in
+            thread.title.localizedCaseInsensitiveContains(query)
+                || thread.messages.contains { message in
+                    (message.displayContent ?? message.content).localizedCaseInsensitiveContains(query)
+                }
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Chat history")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Search saved conversations on this Mac")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Button {
+                    model.newChat()
+                    onSelect(model.currentThread)
+                } label: {
+                    Label("New", systemImage: "plus")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Start a new chat")
+            }
+
+            HStack(spacing: 7) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search titles and messages", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .accessibilityLabel("Search chat history")
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Clear search")
+                }
+            }
+            .font(.system(size: 11))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+
+            if matchingThreads.isEmpty {
+                VStack(spacing: 7) {
+                    Image(systemName: searchText.isEmpty ? "bubble.left.and.bubble.right" : "magnifyingglass")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.secondary)
+                    Text(searchText.isEmpty ? "No chats yet" : "No matching chats")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 4) {
+                        ForEach(matchingThreads) { thread in
+                            historyRow(thread)
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
+                .scrollIndicators(.visible)
+            }
+        }
+        .padding(14)
+        .frame(width: 360, height: 390)
+    }
+
+    private func historyRow(_ thread: ChatThread) -> some View {
+        HStack(spacing: 4) {
+            Button { onSelect(thread) } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: thread.id == model.activeThreadID ? "checkmark.circle.fill" : "bubble.left")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(thread.id == model.activeThreadID ? Color.accentColor : Color.secondary)
+                        .frame(width: 18)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text(thread.title)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Spacer(minLength: 4)
+                            Text(thread.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Text(preview(for: thread))
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open chat: \(thread.title)")
+
+            Menu {
+                Button { onRename(thread) } label: {
+                    Label("Rename…", systemImage: "pencil")
+                }
+                Button(role: .destructive) { onDelete(thread) } label: {
+                    Label("Delete…", systemImage: "trash")
+                }
+                    .disabled(model.isSending)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .help("Rename or delete this chat")
+        }
+        .padding(.leading, 7)
+        .padding(.trailing, 4)
+        .padding(.vertical, 5)
+        .background(
+            thread.id == model.activeThreadID ? Color.accentColor.opacity(0.08) : Color.clear,
+            in: RoundedRectangle(cornerRadius: 8)
+        )
+    }
+
+    private func preview(for thread: ChatThread) -> String {
+        guard let message = thread.messages.reversed().first(where: {
+            !(($0.displayContent ?? $0.content).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }) else {
+            return "No messages yet"
+        }
+        let content = (message.displayContent ?? message.content)
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(content.prefix(120))
+    }
+}
+
 private struct ContextReviewPopover: View {
     let attachment: ContextAttachment
     let onCancel: () -> Void
     let onUse: () -> Void
 
-    private let ink = Color(red: 0.09, green: 0.13, blue: 0.20)
-    private let muted = Color(red: 0.40, green: 0.45, blue: 0.54)
+    private let ink = Color.primary
+    private let muted = Color.secondary
     private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
 
     var body: some View {
@@ -860,7 +1149,7 @@ private struct ContextReviewPopover: View {
                     .padding(9)
             }
             .frame(height: 190)
-            .background(Color(red: 0.975, green: 0.980, blue: 0.988), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color(nsColor: .underPageBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
 
             HStack {
                 Text(attachment.wasTruncated
@@ -905,7 +1194,7 @@ private struct WordDocumentEditor: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Review your Word document")
                 .font(.system(size: 17, weight: .semibold))
-            Text("Edit the text before saving. The Word file contains text; original formatting, tables and images aren’t retained.")
+            Text("Use # for headings, - for bullets, and **bold** or *italic*; these are formatted when saved. Existing page layouts, tables and images aren’t retained.")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1036,10 +1325,10 @@ private struct UpdateReleaseNotesPopover: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("What’s New")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.09, green: 0.13, blue: 0.20))
+                    .foregroundStyle(Color.primary)
                 Text("NOVA Copilot \(version)")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color(red: 0.40, green: 0.45, blue: 0.54))
+                    .foregroundStyle(Color.secondary)
             }
 
             Divider()
@@ -1054,7 +1343,7 @@ private struct UpdateReleaseNotesPopover: View {
                                 .padding(.top, 2)
                             Text(note)
                                 .font(.system(size: 12))
-                                .foregroundStyle(Color(red: 0.18, green: 0.22, blue: 0.29))
+                                .foregroundStyle(Color.primary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -1080,8 +1369,8 @@ private struct ClipboardActionPopover: View {
     let onCancel: () -> Void
     let onRun: (RewriteTone) -> Void
 
-    private let ink = Color(red: 0.09, green: 0.13, blue: 0.20)
-    private let muted = Color(red: 0.40, green: 0.45, blue: 0.54)
+    private let ink = Color.primary
+    private let muted = Color.secondary
     private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
 
     var body: some View {
@@ -1108,7 +1397,7 @@ private struct ClipboardActionPopover: View {
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
                 .padding(10)
-                .background(Color(red: 0.96, green: 0.97, blue: 0.985), in: RoundedRectangle(cornerRadius: 9))
+                .background(Color(nsColor: .underPageBackgroundColor), in: RoundedRectangle(cornerRadius: 9))
 
             Text(characterCountLabel)
                 .font(.system(size: 10, weight: .medium))
@@ -1160,8 +1449,10 @@ private struct MessageBubble: View {
     let isStreaming: Bool
     let canRetry: Bool
     let onCopy: () -> Void
+    let onCopyCode: (String) -> Void
     let onRetry: () -> Void
     let onSaveWord: () -> Void
+    @State private var isHovered = false
 
     private var isUser: Bool { message.role == .user }
 
@@ -1178,7 +1469,7 @@ private struct MessageBubble: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 if !isUser {
-                    Text("NOVA V8").font(.system(size: 9, weight: .bold)).tracking(0.7).foregroundStyle(Color(red: 0.35, green: 0.40, blue: 0.50))
+                    Text("NOVA V8").font(.system(size: 9, weight: .bold)).tracking(0.7).foregroundStyle(Color.secondary)
                 }
                 if message.content.isEmpty && !isUser && isStreaming {
                     HStack(spacing: 5) {
@@ -1186,13 +1477,23 @@ private struct MessageBubble: View {
                         Text("NOVA is thinking…").font(.system(size: 12)).foregroundStyle(Color.secondary)
                     }
                     .padding(.vertical, 4)
+                } else if !isUser && !isStreaming {
+                    MarkdownResponseView(content: message.content, accent: accent, onCopyCode: onCopyCode)
+                        .font(.system(size: 12.5))
+                        .lineSpacing(3)
+                        .foregroundStyle(Color.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityAction(named: Text("Copy response")) { onCopy() }
                 } else {
                     Text(message.displayContent ?? message.content)
                         .font(.system(size: 12.5))
                         .lineSpacing(3)
                         .textSelection(.enabled)
-                        .foregroundStyle(isUser ? Color.white : Color(red: 0.12, green: 0.16, blue: 0.23))
+                        .foregroundStyle(isUser ? Color.white : Color.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityAction(named: Text("Copy response")) {
+                            if !isUser { onCopy() }
+                        }
                 }
                 if !isUser && isStreaming && !message.content.isEmpty {
                     HStack(spacing: 5) {
@@ -1204,7 +1505,7 @@ private struct MessageBubble: View {
                     .padding(.top, 4)
                     .accessibilityElement(children: .combine)
                 }
-                if !isUser && !message.content.isEmpty && !isStreaming {
+                if !isUser && !message.content.isEmpty && !isStreaming && isHovered {
                     HStack(spacing: 12) {
                         Button(action: onCopy) {
                             Label("Copy", systemImage: "doc.on.doc")
@@ -1233,19 +1534,233 @@ private struct MessageBubble: View {
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 9)
-            .background(isUser ? accent : .white, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(isUser ? Color.clear : Color(red: 0.90, green: 0.92, blue: 0.95), lineWidth: 1))
+            .background(isUser ? accent : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(isUser ? Color.clear : Color(nsColor: .separatorColor), lineWidth: 1))
             .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
             if isUser {
                 Image(systemName: "person.fill")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Color.white)
                     .frame(width: 24, height: 24)
-                    .background(Color(red: 0.42, green: 0.48, blue: 0.61), in: RoundedRectangle(cornerRadius: 8))
+                    .background(accent, in: RoundedRectangle(cornerRadius: 8))
             } else {
                 Spacer(minLength: 0).frame(maxWidth: 4)
             }
         }
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: isHovered)
+    }
+}
+
+private struct MarkdownResponseView: View {
+    let content: String
+    let accent: Color
+    let onCopyCode: (String) -> Void
+
+    private var blocks: [MarkdownResponseBlock] { MarkdownResponseBlock.parse(content) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ForEach(blocks) { block in
+                blockView(block)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
+    }
+
+    @ViewBuilder
+    private func blockView(_ block: MarkdownResponseBlock) -> some View {
+        switch block.style {
+        case .paragraph:
+            markdownText(block.text)
+                .font(.system(size: 12.5))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        case .heading(let level):
+            markdownText(block.text)
+                .font(.system(size: level == 1 ? 17 : level == 2 ? 15 : 13.5, weight: .semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 3)
+        case .bullet:
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Circle().fill(accent).frame(width: 4, height: 4).padding(.leading, 3)
+                markdownText(block.text)
+                    .font(.system(size: 12.5))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        case .numbered(let number):
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Text(number)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(minWidth: 15, alignment: .trailing)
+                markdownText(block.text)
+                    .font(.system(size: 12.5))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        case .quote:
+            HStack(alignment: .top, spacing: 8) {
+                RoundedRectangle(cornerRadius: 2).fill(accent.opacity(0.6)).frame(width: 3)
+                markdownText(block.text)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(Color.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 2)
+        case .code(let language):
+            MarkdownCodeBlock(code: block.text, language: language, onCopy: onCopyCode)
+        }
+    }
+
+    private func markdownText(_ source: String) -> Text {
+        if let attributed = try? AttributedString(markdown: source) {
+            return Text(attributed)
+        }
+        return Text(source)
+    }
+}
+
+private struct MarkdownCodeBlock: View {
+    let code: String
+    let language: String
+    let onCopy: (String) -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !language.isEmpty || isHovered {
+                HStack {
+                    Text(language.isEmpty ? "CODE" : language.uppercased())
+                        .font(.system(size: 8, weight: .bold))
+                        .tracking(0.7)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if isHovered {
+                        Button { onCopy(code) } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                                .font(.system(size: 9, weight: .semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.accentColor)
+                        .help("Copy this code block")
+                    }
+                }
+            }
+            Text(code)
+                .font(.system(size: 11, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: isHovered)
+    }
+}
+
+private struct MarkdownResponseBlock: Identifiable {
+    enum Style {
+        case paragraph
+        case heading(Int)
+        case bullet
+        case numbered(String)
+        case quote
+        case code(String)
+    }
+
+    let id: Int
+    let style: Style
+    let text: String
+
+    static func parse(_ source: String) -> [MarkdownResponseBlock] {
+        var blocks: [MarkdownResponseBlock] = []
+        var paragraphLines: [String] = []
+        var codeLines: [String] = []
+        var codeLanguage: String?
+
+        func append(_ style: Style, _ text: String) {
+            blocks.append(MarkdownResponseBlock(id: blocks.count, style: style, text: text))
+        }
+
+        func flushParagraph() {
+            guard !paragraphLines.isEmpty else { return }
+            let text = paragraphLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty { append(.paragraph, text) }
+            paragraphLines.removeAll(keepingCapacity: true)
+        }
+
+        for line in source.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            if codeLanguage != nil {
+                if trimmed.hasPrefix("```") {
+                    append(.code(codeLanguage ?? ""), codeLines.joined(separator: "\n"))
+                    codeLines.removeAll(keepingCapacity: true)
+                    codeLanguage = nil
+                } else {
+                    codeLines.append(line)
+                }
+                continue
+            }
+
+            if trimmed.hasPrefix("```") {
+                flushParagraph()
+                codeLanguage = String(trimmed.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                continue
+            }
+
+            if trimmed.isEmpty {
+                flushParagraph()
+                continue
+            }
+
+            let headingMarks = trimmed.prefix(while: { $0 == "#" }).count
+            if (1...6).contains(headingMarks), trimmed.dropFirst(headingMarks).first?.isWhitespace == true {
+                flushParagraph()
+                let text = trimmed.dropFirst(headingMarks).trimmingCharacters(in: .whitespaces)
+                append(.heading(headingMarks), text)
+                continue
+            }
+
+            if let bullet = ["- ", "* ", "+ "].first(where: { trimmed.hasPrefix($0) }) {
+                flushParagraph()
+                append(.bullet, String(trimmed.dropFirst(bullet.count)))
+                continue
+            }
+
+            if let match = trimmed.range(of: #"^\d+[.)]\s+"#, options: .regularExpression) {
+                flushParagraph()
+                let prefix = String(trimmed[match]).trimmingCharacters(in: .whitespaces)
+                append(.numbered(prefix), String(trimmed[match.upperBound...]))
+                continue
+            }
+
+            if trimmed.hasPrefix(">") {
+                flushParagraph()
+                append(.quote, String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces))
+                continue
+            }
+
+            if trimmed.range(of: #"^(?:---+|___+|\*\*\*+)$"#, options: .regularExpression) != nil {
+                flushParagraph()
+                continue
+            }
+
+            paragraphLines.append(line)
+        }
+
+        flushParagraph()
+        if let codeLanguage {
+            append(.code(codeLanguage), codeLines.joined(separator: "\n"))
+        }
+        return blocks
     }
 }

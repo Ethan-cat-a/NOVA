@@ -14,6 +14,19 @@
 - Updates streamed responses in place, preserving scroll position and avoiding full conversation redraws.
 - Adds cancellation, UTF-8 streaming and incremental-rendering tests.
 
+# NOVA Copilot Version 1.4.6 (2026-11-05)
+
+- Formats completed answers with readable headings, lists, quotes and code blocks while keeping live streaming responsive.
+- Adds hover-to-copy controls to individual code blocks.
+- Adds local chat-history search across conversation titles and messages, with rename and confirmed delete actions.
+
+# NOVA Copilot Version 1.4.5 (2026-11-05)
+
+- Lets you add up to five context items total—images, PDFs, Word documents or screen captures—review each extracted text preview locally, and remove individual items before sending.
+- Formats new Word exports with headings, bulleted and numbered lists, bold, italics and code blocks; original Word layouts, tables and images are not preserved.
+- Follows the Mac’s light or dark appearance.
+- Hides reply actions until you hover over a completed answer, while keeping Copy available as an accessibility action.
+
 # NOVA Copilot Version 1.4.2 (2026-11-05)
 
 - Shows a clear thinking or writing indicator while NOVA streams a response, with a labeled Stop button.

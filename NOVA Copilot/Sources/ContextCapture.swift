@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 import Vision
 
 struct ContextAttachment: Identifiable {
-    enum Kind {
+    enum Kind: Equatable {
         case image
         case pdf
         case screenshot
