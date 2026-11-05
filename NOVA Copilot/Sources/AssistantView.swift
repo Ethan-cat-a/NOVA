@@ -281,6 +281,10 @@ struct AssistantView: View {
             .onChange(of: model.currentThread.messages.count) { _ in
                 withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
             }
+            .onChange(of: model.currentThread.messages.last?.content) { content in
+                guard model.isSending, content != nil else { return }
+                proxy.scrollTo("conversation-bottom", anchor: .bottom)
+            }
             .onChange(of: model.activeThreadID) { _ in
                 proxy.scrollTo("conversation-bottom", anchor: .bottom)
             }
