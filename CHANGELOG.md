@@ -1,3 +1,9 @@
+# NOVA Copilot Version 1.3.4 (2026-11-05)
+
+- Remembers the selected rewrite tone and adds a dismissible first-run tip.
+- Adds Preferences for Launch at Login, automatic update checks, check frequency, and the keyboard shortcut.
+- Shows manual update check results in the panel and makes failed connection requests retryable.
+
 # NOVA Copilot Version 1.3.3
 
 - Adds one-click clipboard actions to summarize or rewrite copied text.

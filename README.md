@@ -4,14 +4,14 @@
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
   <p>
-    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.3.zip"><strong>Download for macOS</strong></a>
+    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.4.zip"><strong>Download latest macOS release · 1.3.4</strong></a>
     &nbsp; · &nbsp;
     <a href="NOVA%20Copilot%20Windows/README.md"><strong>Get started on Windows</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.3.3-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.3.4-263C63?style=flat-square&logo=apple&logoColor=white" />
     <img alt="Windows" src="https://img.shields.io/badge/Windows-1.0.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
@@ -25,7 +25,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Version 1.3.3 · Native Swift / AppKit</strong></p>
+      <p><strong>Version 1.3.4 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with a menu-bar control, floating assistant panel and quick keyboard access.</p>
       <ul>
         <li>macOS 13 or later</li>
@@ -35,7 +35,7 @@
         <li>Daily and manual update checks, with your approval before installation</li>
         <li>One-click summarize and rewrite actions for copied text</li>
       </ul>
-      <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.3.zip"><strong>↓ Download Mac app ZIP</strong></a></p>
+      <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.4.zip"><strong>↓ Download Mac app ZIP · 1.3.4</strong></a></p>
       <p><sub>Users on 1.2.0, 1.3.0, or 1.3.1 must install 1.3.2 manually once; users on 1.3.2 can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
@@ -120,6 +120,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for macOS — 1.3.4](CHANGELOG.md#nova-copilot-version-134-2026-11-05)
 - [NOVA Copilot for macOS — 1.3.3](CHANGELOG.md#nova-copilot-version-133)
 - [NOVA Copilot for macOS — 1.3.2](CHANGELOG.md#nova-copilot-version-132)
 - [NOVA Copilot for macOS — 1.3.1](CHANGELOG.md#nova-copilot-version-131)

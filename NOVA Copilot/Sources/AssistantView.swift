@@ -7,6 +7,8 @@ struct AssistantView: View {
     let onHide: () -> Void
     let onQuit: () -> Void
     let onCheckForUpdates: () -> Void
+    let onShowPreferences: () -> Void
+    @ObservedObject var updateStatus: UpdaterStatus
 
     @FocusState private var inputFocused: Bool
     @StateObject private var viewState = AssistantViewState()
@@ -18,6 +20,24 @@ struct AssistantView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if let message = updateStatus.message {
+                HStack(spacing: 7) {
+                    Image(systemName: updateStatus.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                    Text(message).lineLimit(2)
+                    Spacer(minLength: 0)
+                    Button { updateStatus.dismiss() } label: {
+                        Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Dismiss update status")
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(updateStatus.isError ? Color.orange : accent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background((updateStatus.isError ? Color.orange : accent).opacity(0.07))
+                .accessibilityElement(children: .combine)
+            }
             Divider().overlay(Color(red: 0.89, green: 0.91, blue: 0.94))
             modeBar
             Divider().overlay(Color(red: 0.92, green: 0.93, blue: 0.95))
@@ -35,12 +55,45 @@ struct AssistantView: View {
         .onChange(of: model.lastError) { value in
             if let value, !model.isSending { showNotice("NOVA Copilot", message: value) }
         }
+        .onChange(of: model.currentThread.messages.count) { count in
+            if count > 0 { viewState.dismissFirstRunTip() }
+        }
         .alert(Text(viewState.alertTitle), isPresented: $viewState.showAlert) {
+            if model.canRetryLastRequest {
+                Button("Retry") {
+                    viewState.showAlert = false
+                    model.clearDisplayedError()
+                    model.retryLastRequest()
+                }
+            }
             Button("OK", role: .cancel) {
                 viewState.showAlert = false
                 model.clearDisplayedError()
             }
         } message: { Text(viewState.alertMessage) }
+        .popover(item: $viewState.clipboardReview, arrowEdge: .top) { review in
+            ClipboardActionPopover(
+                review: review,
+                tone: $viewState.rewriteTone,
+                onCancel: { viewState.clipboardReview = nil },
+                onRun: { tone in
+                    guard model.runClipboardAction(review.action, snapshot: review.snapshot, tone: tone) else {
+                        viewState.clipboardReview = nil
+                        showFeedback("Send or clear your draft, then try the clipboard action again.", isError: true)
+                        return
+                    }
+
+                    viewState.clipboardReview = nil
+                    let included = review.snapshot.includedCharacterCount.formatted()
+                    let count = review.snapshot.wasTruncated
+                        ? "first \(included) of \(review.snapshot.originalCharacterCount.formatted()) characters"
+                        : "\(included) characters"
+                    showFeedback("\(review.action.title) started · \(count) sent to Nova")
+                    inputFocused = true
+                }
+            )
+            .padding(6)
+        }
     }
 
     private func showNotice(_ title: String, message: String) {
@@ -65,10 +118,18 @@ struct AssistantView: View {
                         .padding(.horizontal, 5).padding(.vertical, 3)
                         .background(accent.opacity(0.08), in: Capsule())
                 }
-                HStack(spacing: 5) {
-                    Circle().fill(model.isConnected ? Color(red: 0.13, green: 0.65, blue: 0.39) : Color.orange).frame(width: 6, height: 6)
-                    Text(model.connectionStatus).font(.system(size: 10, weight: .medium)).foregroundStyle(muted).lineLimit(1)
+                Button {
+                    guard !model.isConnected, !model.isSending, !model.isCheckingConnection else { return }
+                    Task { await model.checkConnection() }
+                } label: {
+                    HStack(spacing: 5) {
+                        Circle().fill(model.isConnected ? Color(red: 0.13, green: 0.65, blue: 0.39) : Color.orange).frame(width: 6, height: 6)
+                        Text(model.connectionStatus).font(.system(size: 10, weight: .medium)).foregroundStyle(muted).lineLimit(1)
+                    }
                 }
+                .buttonStyle(.plain)
+                .disabled(model.isConnected || model.isSending || model.isCheckingConnection)
+                .help(model.isConnected ? "Nova connection is ready" : "Click to retry the Nova connection")
             }
             Spacer(minLength: 2)
             Button { panelState.togglePinned() } label: {
@@ -83,9 +144,9 @@ struct AssistantView: View {
 
             Button(action: onCheckForUpdates) {
                 HStack(spacing: 5) {
-                    Image(systemName: "arrow.down.circle")
+                    Image(systemName: updateStatus.isChecking ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("Update")
+                    Text(updateStatus.isChecking ? "Checking…" : "Update")
                         .font(.system(size: 10, weight: .semibold))
                 }
                 .foregroundStyle(muted)
@@ -94,8 +155,9 @@ struct AssistantView: View {
                 .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
+            .disabled(updateStatus.isChecking)
             .accessibilityLabel("Check for Updates Now")
-            .help("Check for Updates Now")
+            .help(updateStatus.message ?? "Check for Updates Now")
 
             Menu {
                 Button { model.newChat() } label: { Label("New chat", systemImage: "plus.message") }
@@ -113,6 +175,7 @@ struct AssistantView: View {
                 Divider()
                 Toggle("Keep on top", isOn: Binding(get: { panelState.isPinned }, set: { panelState.setPinned($0) }))
                 Toggle("Launch at Login", isOn: Binding(get: { panelState.launchAtLogin }, set: { panelState.setLaunchAtLogin($0) }))
+                Button { onShowPreferences() } label: { Label("Preferences…", systemImage: "slider.horizontal.3") }
                 Divider()
                 Button { runClipboardQuickAction(.summarize) } label: { Label("Summarize copied text", systemImage: "text.alignleft") }
                 Button { runClipboardQuickAction(.rewrite) } label: { Label("Rewrite copied text", systemImage: "pencil.line") }
@@ -207,25 +270,43 @@ struct AssistantView: View {
                     .foregroundStyle(muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if viewState.showFirstRunTip {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(accent)
+                    Text("Quick tip: ⌘⇧Space opens NOVA anywhere. Copied text is previewed before it’s sent.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button { viewState.dismissFirstRunTip() } label: {
+                        Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Dismiss tip")
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(muted)
+                .padding(9)
+                .background(accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
+            }
+            clipboardQuickActions
             VStack(spacing: 8) {
-                starter("Summarize copied text", subtitle: "Copy text first · runs immediately", icon: "text.alignleft") {
-                    runClipboardQuickAction(.summarize)
-                }
-                starter("Rewrite copied text", subtitle: "Keep the meaning, improve the wording", icon: "pencil.line") {
-                    runClipboardQuickAction(.rewrite)
-                }
                 starter("Help me write something", subtitle: "Email, essay, or a clear reply", icon: "pencil.line") {
                     model.input = "Help me write something. Ask any essential questions first, then draft it clearly."
                     inputFocused = true
                 }
-                starter("Explain this simply", subtitle: "Make a difficult concept easier", icon: "sparkles") {
-                    model.input = "Explain this concept simply, step by step, with a quick example: "
-                    inputFocused = true
-                }
-                starter("Help with code", subtitle: "Debug, build, or improve a project", icon: "chevron.left.forwardslash.chevron.right") {
-                    model.setMode(.coding)
-                    model.input = "Help me debug or improve this code:\n"
-                    inputFocused = true
+                DisclosureGroup("More examples", isExpanded: $viewState.showMoreExamples) {
+                    VStack(spacing: 8) {
+                        starter("Explain this simply", subtitle: "Make a difficult concept easier", icon: "sparkles") {
+                            model.input = "Explain this concept simply, step by step, with a quick example: "
+                            inputFocused = true
+                        }
+                        starter("Help with code", subtitle: "Debug, build, or improve a project", icon: "chevron.left.forwardslash.chevron.right") {
+                            model.setMode(.coding)
+                            model.input = "Help me debug or improve this code:\n"
+                            inputFocused = true
+                        }
+                    }
+                    .padding(.top, 8)
                 }
             }
             HStack(spacing: 5) {
@@ -238,6 +319,38 @@ struct AssistantView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 9)
+    }
+
+    private var clipboardQuickActions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("COPIED TEXT")
+                    .font(.system(size: 9, weight: .bold))
+                    .tracking(0.9)
+                    .foregroundStyle(muted)
+                Spacer()
+                Text("Preview before sending")
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(muted.opacity(0.9))
+            }
+
+            HStack(spacing: 8) {
+                ForEach([ClipboardQuickAction.summarize, .rewrite]) { action in
+                    Button { runClipboardQuickAction(action) } label: {
+                        Label(action.title, systemImage: action.icon)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 9))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(10)
+        .background(.white, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red: 0.89, green: 0.91, blue: 0.94), lineWidth: 1))
     }
 
     private func starter(_ title: String, subtitle: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -265,18 +378,53 @@ struct AssistantView: View {
 
     private func runClipboardQuickAction(_ action: ClipboardQuickAction) {
         if model.isSending {
-            showNotice("Nova is busy", message: "Wait for the current reply to finish, then try the quick action.")
+            showFeedback("Finish the current reply before starting a clipboard action.", isError: true)
         } else if !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            showNotice("Draft in progress", message: "Send or clear your draft before running a quick action.")
-        } else if !model.runClipboardAction(action) {
-            showNotice("No copied text", message: "Copy text in another app first, then choose a quick action.")
+            showFeedback("Send or clear your draft before starting a clipboard action.", isError: true)
+        } else if let snapshot = model.clipboardTextSnapshot() {
+            viewState.clipboardReview = ClipboardActionReview(action: action, snapshot: snapshot)
         } else {
-            inputFocused = true
+            showFeedback("No copied text found. Copy some text first, then try again.", isError: true)
+        }
+    }
+
+    private func showFeedback(_ message: String, isError: Bool = false) {
+        withAnimation(.easeOut(duration: 0.18)) {
+            viewState.feedbackMessage = message
+            viewState.feedbackIsError = isError
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            guard viewState.feedbackMessage == message else { return }
+            withAnimation(.easeIn(duration: 0.18)) { viewState.feedbackMessage = nil }
         }
     }
 
     private var composer: some View {
         VStack(spacing: 8) {
+            if let feedbackMessage = viewState.feedbackMessage {
+                HStack(spacing: 7) {
+                    Image(systemName: viewState.feedbackIsError ? "info.circle.fill" : "checkmark.circle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(feedbackMessage)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button {
+                        withAnimation(.easeIn(duration: 0.15)) { viewState.feedbackMessage = nil }
+                    } label: {
+                        Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Dismiss message")
+                }
+                .foregroundStyle(viewState.feedbackIsError ? Color.orange : accent)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background((viewState.feedbackIsError ? Color.orange : accent).opacity(0.07), in: RoundedRectangle(cornerRadius: 9))
+                .accessibilityElement(children: .combine)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
             if panelState.launchLoginError != nil {
                 HStack(spacing: 6) {
                     Image(systemName: "info.circle")
@@ -354,6 +502,140 @@ private final class AssistantViewState: ObservableObject {
     @Published var showAlert = false
     @Published var alertTitle = "NOVA Copilot"
     @Published var alertMessage = ""
+    @Published var clipboardReview: ClipboardActionReview?
+    @Published var rewriteTone: RewriteTone {
+        didSet { UserDefaults.standard.set(rewriteTone.rawValue, forKey: Self.rewriteToneKey) }
+    }
+    @Published var showFirstRunTip: Bool
+    @Published var feedbackMessage: String?
+    @Published var feedbackIsError = false
+    @Published var showMoreExamples = false
+
+    private static let rewriteToneKey = "com.novatech.NOVACompanion.rewriteTone"
+    private static let firstRunTipDismissedKey = "com.novatech.NOVACompanion.firstRunTipDismissed"
+
+    init() {
+        rewriteTone = RewriteTone(rawValue: UserDefaults.standard.string(forKey: Self.rewriteToneKey) ?? "") ?? .natural
+        showFirstRunTip = !UserDefaults.standard.bool(forKey: Self.firstRunTipDismissedKey)
+    }
+
+    func dismissFirstRunTip() {
+        guard showFirstRunTip else { return }
+        showFirstRunTip = false
+        UserDefaults.standard.set(true, forKey: Self.firstRunTipDismissedKey)
+    }
+}
+
+@MainActor
+final class UpdaterStatus: ObservableObject {
+    @Published private(set) var isChecking = false
+    @Published private(set) var message: String?
+    @Published private(set) var isError = false
+
+    private var clearWorkItem: DispatchWorkItem?
+
+    func beginCheck() {
+        clearWorkItem?.cancel()
+        message = nil
+        isError = false
+        isChecking = true
+    }
+
+    func finish(_ message: String, isError: Bool = false) {
+        isChecking = false
+        self.message = message
+        self.isError = isError
+        let workItem = DispatchWorkItem { [weak self] in self?.dismiss() }
+        clearWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: workItem)
+    }
+
+    func dismiss() {
+        clearWorkItem?.cancel()
+        clearWorkItem = nil
+        message = nil
+        isError = false
+    }
+}
+
+private struct ClipboardActionPopover: View {
+    let review: ClipboardActionReview
+    @Binding var tone: RewriteTone
+    let onCancel: () -> Void
+    let onRun: (RewriteTone) -> Void
+
+    private let ink = Color(red: 0.09, green: 0.13, blue: 0.20)
+    private let muted = Color(red: 0.40, green: 0.45, blue: 0.54)
+    private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            HStack(spacing: 8) {
+                Image(systemName: review.action.icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(accent)
+                Text("Review copied text")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ink)
+                Spacer(minLength: 0)
+            }
+
+            Text("Check the preview before NOVA sends it.")
+                .font(.system(size: 11))
+                .foregroundStyle(muted)
+
+            Text(review.snapshot.text)
+                .font(.system(size: 11.5))
+                .lineSpacing(2)
+                .lineLimit(5)
+                .truncationMode(.tail)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
+                .padding(10)
+                .background(Color(red: 0.96, green: 0.97, blue: 0.985), in: RoundedRectangle(cornerRadius: 9))
+
+            Text(characterCountLabel)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(muted)
+
+            if review.action == .rewrite {
+                HStack {
+                    Text("Tone")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ink)
+                    Spacer()
+                    Picker("Tone", selection: $tone) {
+                        ForEach(RewriteTone.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .controlSize(.small)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Spacer(minLength: 0)
+                Button(review.action.title) { onRun(tone) }
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 320)
+    }
+
+    private var characterCountLabel: String {
+        let included = review.snapshot.includedCharacterCount.formatted()
+        if review.snapshot.wasTruncated {
+            return "Showing first \(included) of \(review.snapshot.originalCharacterCount.formatted()) characters"
+        }
+        return "\(included) characters"
+    }
 }
 
 private struct MessageBubble: View {

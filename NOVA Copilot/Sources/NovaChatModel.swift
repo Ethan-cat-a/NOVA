@@ -8,12 +8,28 @@ final class NovaChatModel: ObservableObject {
     @Published private(set) var activeThreadID: UUID
     @Published var input: String = ""
     @Published private(set) var isSending = false
+    @Published private(set) var isCheckingConnection = false
     @Published private(set) var connectionStatus = "Connecting to Nova…"
     @Published private(set) var isConnected = false
     @Published private(set) var lastError: String?
 
     private let storageKey = "com.novatech.NOVACompanion.threads.v1"
     private var requestTask: Task<Void, Never>?
+    private var failedRequest: FailedRequest?
+
+    private struct FailedRequest {
+        let threadID: UUID
+        let userMessageID: UUID
+        let responseMessageID: UUID
+        let prompt: String
+    }
+
+    var canRetryLastRequest: Bool {
+        guard !isSending,
+              let failedRequest,
+              let thread = threads.first(where: { $0.id == failedRequest.threadID }) else { return false }
+        return thread.messages.contains(where: { $0.id == failedRequest.userMessageID })
+    }
 
     var currentThread: ChatThread {
         threads.first(where: { $0.id == activeThreadID }) ?? threads[0]
@@ -60,6 +76,7 @@ final class NovaChatModel: ObservableObject {
 
     func clearCurrentChat() {
         guard !isSending else { stop() ; return }
+        if failedRequest?.threadID == activeThreadID { failedRequest = nil }
         updateThread(activeThreadID) { $0.messages = []; $0.title = "New chat"; $0.updatedAt = Date() }
         lastError = nil
         save()
@@ -78,23 +95,37 @@ final class NovaChatModel: ObservableObject {
         return true
     }
 
+    func clipboardTextSnapshot() -> ClipboardTextSnapshot? {
+        guard let copied = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !copied.isEmpty else {
+            return nil
+        }
+        return ClipboardTextSnapshot(
+            text: String(copied.prefix(18000)),
+            originalCharacterCount: copied.count
+        )
+    }
+
     @discardableResult
-    func runClipboardAction(_ action: ClipboardQuickAction) -> Bool {
+    func runClipboardAction(
+        _ action: ClipboardQuickAction,
+        snapshot: ClipboardTextSnapshot,
+        tone: RewriteTone = .natural
+    ) -> Bool {
         guard !isSending,
               input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let copied = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !copied.isEmpty else {
-            return false
-        }
+              !snapshot.text.isEmpty else { return false }
 
         if !currentThread.messages.isEmpty { newChat() }
-        let clipped = String(copied.prefix(18000))
-        input = "\(action.prompt)\n\nCopied text:\n--- Begin copied text ---\n\(clipped)\n--- End copied text ---"
+        input = "\(action.prompt(tone: tone))\n\nCopied text:\n--- Begin copied text ---\n\(snapshot.text)\n--- End copied text ---"
         send()
         return true
     }
 
     func checkConnection() async {
+        guard !isCheckingConnection else { return }
+        isCheckingConnection = true
+        defer { isCheckingConnection = false }
         connectionStatus = "Checking Nova V8…"
         lastError = nil
         do {
@@ -121,15 +152,45 @@ final class NovaChatModel: ObservableObject {
         let prompt = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
 
-        let threadID = activeThreadID
+        startRequest(prompt: prompt, threadID: activeThreadID, existingUserMessageID: nil)
+    }
+
+    func retryLastRequest() {
+        guard canRetryLastRequest, let failedRequest,
+              let thread = threads.first(where: { $0.id == failedRequest.threadID }),
+              thread.messages.contains(where: { $0.id == failedRequest.userMessageID }) else { return }
+
+        activeThreadID = failedRequest.threadID
+        updateThread(failedRequest.threadID) { current in
+            current.messages.removeAll(where: { $0.id == failedRequest.responseMessageID })
+        }
+        save()
+        input = failedRequest.prompt
+        lastError = nil
+        startRequest(
+            prompt: failedRequest.prompt,
+            threadID: failedRequest.threadID,
+            existingUserMessageID: failedRequest.userMessageID
+        )
+    }
+
+    private func startRequest(prompt: String, threadID: UUID, existingUserMessageID: UUID?) {
         input = ""
         lastError = nil
-        let threadBeforeSend = currentThread
-        if threadBeforeSend.messages.isEmpty || threadBeforeSend.title == "New chat" {
-            let compact = prompt.replacingOccurrences(of: "\n", with: " ")
-            updateThread(threadID) { $0.title = String(compact.prefix(42)); $0.updatedAt = Date() }
+        failedRequest = nil
+        let threadBeforeSend = threads.first(where: { $0.id == threadID }) ?? currentThread
+        let userMessageID: UUID
+        if let existingUserMessageID {
+            userMessageID = existingUserMessageID
+        } else {
+            userMessageID = UUID()
+            if threadBeforeSend.messages.isEmpty || threadBeforeSend.title == "New chat" {
+                let compact = prompt.replacingOccurrences(of: "\n", with: " ")
+                updateThread(threadID) { $0.title = String(compact.prefix(42)); $0.updatedAt = Date() }
+            }
+            appendMessage(ChatMessage(id: userMessageID, role: .user, content: prompt), to: threadID)
         }
-        appendMessage(ChatMessage(role: .user, content: prompt), to: threadID)
+
         let responseID = UUID()
         appendMessage(ChatMessage(id: responseID, role: .assistant, content: ""), to: threadID)
         isSending = true
@@ -161,6 +222,12 @@ final class NovaChatModel: ObservableObject {
                 self.connectionStatus = "Response stopped"
             } catch {
                 self.finishResponse(responseID, threadID: threadID, error: error.localizedDescription)
+                self.failedRequest = FailedRequest(
+                    threadID: threadID,
+                    userMessageID: userMessageID,
+                    responseMessageID: responseID,
+                    prompt: prompt
+                )
             }
             self.isSending = false
             self.requestTask = nil
@@ -182,6 +249,7 @@ final class NovaChatModel: ObservableObject {
             }
             connectionStatus = "Request failed"
         } else {
+            failedRequest = nil
             updateMessage(messageID, threadID: threadID) { message in
                 if message.content.isEmpty { message.content = "No response received." }
             }

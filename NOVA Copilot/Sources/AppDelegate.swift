@@ -84,7 +84,7 @@ private struct EdgeHandleView: View {
         }
         .buttonStyle(.plain)
         .onHover { state.isHovered = $0 }
-        .help("Open NOVA Copilot")
+        .help("Open NOVA Copilot · ⌘⇧Space")
     }
 }
 
@@ -95,9 +95,10 @@ private final class EdgeHandleViewState: ObservableObject {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private let chatModel = NovaChatModel()
     private let panelState = PanelState()
+    private let updateStatus = UpdaterStatus()
     private var panel: FloatingPanel!
     private var edgeHandlePanel: EdgeHandlePanel!
     private var statusItem: NSStatusItem!
@@ -105,12 +106,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeyReference: EventHotKeyRef?
     private var eventHandlerReference: EventHandlerRef?
     private var isPanelAnimating = false
+    private var preferencesWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         updaterController = SPUStandardUpdaterController(
             startingUpdater: true,
-            updaterDelegate: nil,
+            updaterDelegate: self,
             userDriverDelegate: nil
         )
         createPanel()
@@ -223,6 +225,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         updatesItem.target = self
         appMenu.addItem(updatesItem)
+        let preferencesItem = NSMenuItem(
+            title: "Preferences…",
+            action: #selector(showPreferencesWindow),
+            keyEquivalent: ","
+        )
+        preferencesItem.target = self
+        appMenu.addItem(preferencesItem)
         appMenu.addItem(.separator())
 
         let hideItem = NSMenuItem(
@@ -260,7 +269,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showPanelFromMenu() { showPanel() }
 
     @objc private func checkForUpdates() {
+        updateStatus.beginCheck()
         updaterController.checkForUpdates(nil)
+    }
+
+    @objc private func showPreferencesWindow() {
+        if let preferencesWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            preferencesWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 390, height: 345),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "NOVA Copilot Preferences"
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: UpdaterPreferencesView(
+            panelState: panelState,
+            updateSettings: UpdaterPreferencesState(updater: updaterController.updater),
+            onCheckForUpdates: { [weak self] in self?.checkForUpdates() }
+        ))
+        window.center()
+        preferencesWindow = window
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        guard updateStatus.isChecking else { return }
+        updateStatus.finish("Update \(item.displayVersionString) found · review the Sparkle prompt")
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
+        let nsError = error as NSError
+        let userInfo = nsError.userInfo
+        let userInitiated = userInfo[SPUNoUpdateFoundUserInitiatedKey] as? Bool == true
+        guard userInitiated else { return }
+
+        let reason = (userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber)?.intValue
+        let latestVersionReasons = [
+            Int(SPUNoUpdateFoundReason.onLatestVersion.rawValue),
+            Int(SPUNoUpdateFoundReason.onNewerThanLatestVersion.rawValue)
+        ]
+        if let reason, latestVersionReasons.contains(reason) {
+            updateStatus.finish("NOVA is up to date")
+        } else {
+            updateStatus.finish("Couldn’t check for updates. Try again shortly.", isError: true)
+        }
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        guard updateStatus.isChecking else { return }
+        updateStatus.finish("NOVA is up to date")
+    }
+
+    func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
+        guard updateStatus.isChecking else { return }
+        updateStatus.finish("Update check stopped. Try again.", isError: true)
     }
 
     private func createMenuBarItem() {
@@ -349,7 +418,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panelState: panelState,
             onHide: { [weak self] in self?.hidePanel() },
             onQuit: { NSApp.terminate(nil) },
-            onCheckForUpdates: { [weak self] in self?.checkForUpdates() }
+            onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
+            onShowPreferences: { [weak self] in self?.showPreferencesWindow() },
+            updateStatus: updateStatus
         ))
         placePanelAtRightEdgeIfNeeded()
     }
@@ -406,5 +477,69 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             0,
             &hotKeyReference
         )
+    }
+}
+
+@MainActor
+private final class UpdaterPreferencesState: ObservableObject {
+    @Published var automaticChecks: Bool {
+        didSet { updater.automaticallyChecksForUpdates = automaticChecks }
+    }
+    @Published var checkInterval: TimeInterval {
+        didSet { updater.updateCheckInterval = checkInterval }
+    }
+
+    private let updater: SPUUpdater
+
+    init(updater: SPUUpdater) {
+        self.updater = updater
+        automaticChecks = updater.automaticallyChecksForUpdates
+        checkInterval = updater.updateCheckInterval
+    }
+}
+
+private struct UpdaterPreferencesView: View {
+    @ObservedObject var panelState: PanelState
+    @ObservedObject var updateSettings: UpdaterPreferencesState
+    let onCheckForUpdates: () -> Void
+
+    var body: some View {
+        Form {
+            Section("General") {
+                Toggle("Launch NOVA at login", isOn: Binding(
+                    get: { panelState.launchAtLogin },
+                    set: { panelState.setLaunchAtLogin($0) }
+                ))
+                if let error = panelState.launchLoginError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            Section("Updates") {
+                Toggle("Check for updates automatically", isOn: $updateSettings.automaticChecks)
+                Picker("Check frequency", selection: $updateSettings.checkInterval) {
+                    Text("Daily").tag(TimeInterval(86_400))
+                    Text("Weekly").tag(TimeInterval(604_800))
+                }
+                .disabled(!updateSettings.automaticChecks)
+                HStack {
+                    Text("You approve each update before it installs.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 4)
+                    Button("Check Now", action: onCheckForUpdates)
+                        .controlSize(.small)
+                }
+            }
+
+            Section("Keyboard") {
+                LabeledContent("Open or hide NOVA", value: "⌘⇧Space")
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 8)
+        .frame(width: 390, height: 345)
     }
 }
