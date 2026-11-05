@@ -1,3 +1,8 @@
+# NOVA Copilot Version 1.3.5 (2026-11-05)
+
+- Shows the installed version when NOVA is up to date and both installed and available versions when an update is found.
+- Adds a compact **What’s New** view with release notes from the signed Sparkle feed before installing an update.
+
 # NOVA Copilot Version 1.3.4 (2026-11-05)
 
 - Remembers the selected rewrite tone and adds a dismissible first-run tip.

@@ -11,6 +11,7 @@ struct AssistantView: View {
     @ObservedObject var updateStatus: UpdaterStatus
 
     @FocusState private var inputFocused: Bool
+    @State private var showsUpdateNotes = false
     @StateObject private var viewState = AssistantViewState()
 
     private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
@@ -22,9 +23,23 @@ struct AssistantView: View {
             header
             if let message = updateStatus.message {
                 HStack(spacing: 7) {
-                    Image(systemName: updateStatus.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                    Image(systemName: updateStatus.isError
+                          ? "exclamationmark.circle.fill"
+                          : updateStatus.hasAvailableUpdate ? "arrow.down.circle.fill" : "checkmark.circle.fill")
                     Text(message).lineLimit(2)
                     Spacer(minLength: 0)
+                    if updateStatus.hasReleaseNotes {
+                        Button("What’s New") { showsUpdateNotes = true }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10, weight: .semibold))
+                            .accessibilityLabel("Read release notes for version \(updateStatus.availableVersion ?? "")")
+                            .popover(isPresented: $showsUpdateNotes, arrowEdge: .top) {
+                                UpdateReleaseNotesPopover(
+                                    version: updateStatus.availableVersion ?? "",
+                                    releaseNotes: updateStatus.releaseNotes
+                                )
+                            }
+                    }
                     Button { updateStatus.dismiss() } label: {
                         Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
                     }
@@ -36,7 +51,6 @@ struct AssistantView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
                 .background((updateStatus.isError ? Color.orange : accent).opacity(0.07))
-                .accessibilityElement(children: .combine)
             }
             Divider().overlay(Color(red: 0.89, green: 0.91, blue: 0.94))
             modeBar
@@ -531,23 +545,46 @@ final class UpdaterStatus: ObservableObject {
     @Published private(set) var isChecking = false
     @Published private(set) var message: String?
     @Published private(set) var isError = false
+    @Published private(set) var availableVersion: String?
+    @Published private(set) var releaseNotes: [String] = []
 
+    let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
     private var clearWorkItem: DispatchWorkItem?
+
+    var hasAvailableUpdate: Bool { availableVersion != nil }
+    var hasReleaseNotes: Bool { !releaseNotes.isEmpty }
 
     func beginCheck() {
         clearWorkItem?.cancel()
+        clearWorkItem = nil
         message = nil
         isError = false
+        availableVersion = nil
+        releaseNotes = []
         isChecking = true
     }
 
-    func finish(_ message: String, isError: Bool = false) {
+    func foundUpdate(version: String, description: String?, format: String?) {
+        availableVersion = version
+        releaseNotes = Self.releaseNoteLines(description, format: format)
+        finish("\(version) available · current \(currentVersion)", dismissAfter: nil)
+    }
+
+    func finishUpToDate() {
+        finish("Up to date · \(currentVersion)")
+    }
+
+    func finish(_ message: String, isError: Bool = false, dismissAfter: TimeInterval? = 6) {
+        clearWorkItem?.cancel()
+        clearWorkItem = nil
         isChecking = false
         self.message = message
         self.isError = isError
-        let workItem = DispatchWorkItem { [weak self] in self?.dismiss() }
-        clearWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: workItem)
+        if let dismissAfter {
+            let workItem = DispatchWorkItem { [weak self] in self?.dismiss() }
+            clearWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + dismissAfter, execute: workItem)
+        }
     }
 
     func dismiss() {
@@ -555,6 +592,66 @@ final class UpdaterStatus: ObservableObject {
         clearWorkItem = nil
         message = nil
         isError = false
+        availableVersion = nil
+        releaseNotes = []
+    }
+
+    private static func releaseNoteLines(_ description: String?, format: String?) -> [String] {
+        guard format == "plain-text", let description else { return [] }
+        return description
+            .split(whereSeparator: \.isNewline)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .map { $0.replacingOccurrences(of: #"^(?:[-*•]\s*)+"#, with: "", options: .regularExpression) }
+            .filter { !$0.isEmpty }
+    }
+}
+
+private struct UpdateReleaseNotesPopover: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let version: String
+    let releaseNotes: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("What’s New")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color(red: 0.09, green: 0.13, blue: 0.20))
+                Text("NOVA Copilot \(version)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color(red: 0.40, green: 0.45, blue: 0.54))
+            }
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(releaseNotes.enumerated()), id: \.offset) { _, note in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.15, green: 0.34, blue: 0.77))
+                                .padding(.top, 2)
+                            Text(note)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color(red: 0.18, green: 0.22, blue: 0.29))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 210)
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 310)
     }
 }
 

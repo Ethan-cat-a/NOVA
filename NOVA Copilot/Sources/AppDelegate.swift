@@ -301,7 +301,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
     func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         guard updateStatus.isChecking else { return }
-        updateStatus.finish("Update \(item.displayVersionString) found · review the Sparkle prompt")
+        updateStatus.foundUpdate(
+            version: item.displayVersionString,
+            description: item.itemDescription,
+            format: item.itemDescriptionFormat
+        )
     }
 
     func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
@@ -316,7 +320,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
             Int(SPUNoUpdateFoundReason.onNewerThanLatestVersion.rawValue)
         ]
         if let reason, latestVersionReasons.contains(reason) {
-            updateStatus.finish("NOVA is up to date")
+            updateStatus.finishUpToDate()
         } else {
             updateStatus.finish("Couldn’t check for updates. Try again shortly.", isError: true)
         }
@@ -324,7 +328,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
     func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
         guard updateStatus.isChecking else { return }
-        updateStatus.finish("NOVA is up to date")
+        updateStatus.finishUpToDate()
     }
 
     func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
