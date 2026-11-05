@@ -6,13 +6,13 @@
   <p>
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.4.2/NOVA-Copilot-1.4.2.zip"><strong>Download latest macOS release · 1.4.2</strong></a>
     &nbsp; · &nbsp;
-    <a href="NOVA%20Copilot%20Windows/README.md"><strong>Get started on Windows</strong></a>
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.4.2/NOVA-Copilot-Windows-1.4.2.zip"><strong>Download Windows release · 1.4.2</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
     <img alt="macOS" src="https://img.shields.io/badge/macOS-1.4.2-263C63?style=flat-square&logo=apple&logoColor=white" />
-    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.1.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
+    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.4.2-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
 </div>
@@ -44,21 +44,22 @@
     </td>
     <td width="50%" valign="top">
       <h3>⊞ &nbsp; NOVA Copilot for Windows</h3>
-      <p><strong>Version 1.1.0 · Python / Tkinter</strong></p>
-      <p>A separate Windows edition for Lenovo ThinkBook, ThinkPad and other Windows PCs.</p>
+      <p><strong>Version 1.4.2 · Python / Tkinter</strong></p>
+      <p>A standalone Windows edition for Windows 10 and 11 PCs.</p>
       <ul>
         <li>Windows 10 or Windows 11</li>
-        <li>Lenovo ThinkPad and compatible PCs</li>
         <li>Shortcut: <code>Ctrl + Shift + Space</code></li>
         <li>System tray and floating panel</li>
+        <li>Word Doc mode, editable document drafts and reviewed PDF text</li>
+        <li>Copy, Try again and a manual update check</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.1.0/NOVA-Copilot-Windows-1.1.0.zip"><strong>↓ Download Windows app ZIP · 1.1.0</strong></a></p>
-      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.1.0.md">Release notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.4.2/NOVA-Copilot-Windows-1.4.2.zip"><strong>↓ Download Windows app ZIP · 1.4.2</strong></a></p>
+      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.4.2.md">Release notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
     </td>
   </tr>
 </table>
 
-> **Windows install:** Download the Windows 1.1.0 ZIP above, extract it and open `NOVA Copilot.exe`. The app is not signed with a paid code-signing certificate, so Windows SmartScreen may show a warning. The release is built and smoke-tested on GitHub Actions; a physical ThinkBook has not yet been tested.
+> **Windows install:** Download the Windows 1.4.2 ZIP above, extract it and open `NOVA Copilot.exe`. The app is unsigned, so Windows SmartScreen may show a warning. GitHub Actions builds it on a Windows runner.
 
 ## The essentials
 
@@ -110,9 +111,9 @@ The Mac and Windows editions share the same product identity and NOVA V8 service
 - Requests are sent to the existing `https://nova-v8.vercel.app/api/chat` endpoint.
 - Conversation history is stored locally by each edition.
 - Clipboard text is only read when you explicitly choose the clipboard action.
-- Images, PDFs and Word documents are read on your Mac. NOVA V8 receives only the extracted text after you review and send it.
+- The Mac edition can review extracted text from images, PDFs and Word documents before sending it. The Windows edition supports `.docx` and PDFs with selectable text; scanned-document OCR and image import are currently Mac-only.
 - Screen/window capture uses the macOS 14 or later picker; importing images and PDFs works on macOS 13 or later.
-- Word Doc mode saves the generated text as a new `.docx`; formatting, tables and images from an imported file are not preserved.
+- Word Doc mode saves generated text as a new `.docx`; formatting, tables and images from an imported file are not preserved.
 
 ## Project layout
 
@@ -127,6 +128,7 @@ NOVA/
 ## Releases
 
 - [NOVA Copilot for macOS — 1.4.2](CHANGELOG.md#nova-copilot-version-142-2026-11-05)
+- [NOVA Copilot for Windows — 1.4.2](CHANGELOG.md#nova-copilot-for-windows-version-142-2026-11-05)
 - [NOVA Copilot for macOS — 1.4.1](CHANGELOG.md#nova-copilot-version-141-2026-11-05)
 - [NOVA Copilot for macOS — 1.4.0](CHANGELOG.md#nova-copilot-version-140-2026-11-05)
 - [NOVA Copilot for macOS — 1.3.5](CHANGELOG.md#nova-copilot-version-135-2026-11-05)
@@ -135,7 +137,9 @@ NOVA/
 - [NOVA Copilot for macOS — 1.3.1](CHANGELOG.md#nova-copilot-version-131)
 - [NOVA Copilot for macOS — 1.3.0](CHANGELOG.md#nova-copilot-version-130)
 - [NOVA Copilot for macOS — 1.2.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.2.0)
+- [NOVA Copilot for Windows — 1.4.2](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.4.2)
 - [NOVA Copilot for Windows — 1.1.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.1.0)
+- [NOVA Copilot for Windows — 1.4.2 release notes](NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.4.2.md)
 - [NOVA Copilot for Windows — 1.1.0 release notes](NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.1.0.md)
 - [NOVA Copilot for Windows — 1.0.0 release notes](NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.0.0.md)
 

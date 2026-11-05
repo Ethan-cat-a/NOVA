@@ -1,3 +1,12 @@
+# NOVA Copilot for Windows Version 1.4.2 (2026-11-05)
+
+- Updates the Windows edition to the current 1.4.2 feature line.
+- Adds visible thinking/writing status, a labeled Stop control, Copy and Try again for responses.
+- Adds Word Doc mode with `.docx` import, editable draft review and `.docx` export.
+- Adds reviewed text import for Word files and selectable-text PDFs, plus previewed summarize/rewrite clipboard actions.
+- Adds a manual GitHub update check and keeps the immediate Stop and in-place streaming fixes.
+- Documents Windows-specific limits: scanned PDF/image OCR and screen capture are not included; `.docx` export is text-based.
+
 # NOVA Copilot for Windows Version 1.1.0 (2026-11-05)
 
 - Adds a self-contained Windows release package built for download.

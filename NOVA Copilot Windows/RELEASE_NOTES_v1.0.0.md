@@ -2,7 +2,7 @@
 
 **Release channel:** Windows  
 **Target systems:** Windows 10 and Windows 11  
-**Supported hardware:** Lenovo ThinkPad and other compatible Windows PCs
+**Target hardware:** Windows 10 and 11 PCs; no vendor-specific compatibility is claimed
 
 ## Included
 

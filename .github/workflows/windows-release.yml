@@ -33,7 +33,7 @@ jobs:
 
       - name: Build Windows executable
         working-directory: NOVA Copilot Windows
-        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "NOVA Copilot" --hidden-import pystray._win32 app.py
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "NOVA Copilot" --hidden-import pystray._win32 --collect-all docx app.py
 
       - name: Package downloadable app
         shell: pwsh

@@ -28,7 +28,7 @@ if errorlevel 1 (
 )
 
 echo [3/3] Building the Windows app...
-py -3 -m PyInstaller --noconfirm --clean --onefile --windowed --name "NOVA Copilot" --hidden-import pystray._win32 app.py
+py -3 -m PyInstaller --noconfirm --clean --onefile --windowed --name "NOVA Copilot" --hidden-import pystray._win32 --collect-all docx app.py
 if errorlevel 1 (
   echo Build failed.
   pause
@@ -37,6 +37,6 @@ if errorlevel 1 (
 
 echo.
 echo Build complete: dist\NOVA Copilot.exe
-echo You can copy this EXE to your ThinkPad and run it.
+echo You can copy this EXE to a Windows PC and run it.
 pause
 endlocal
