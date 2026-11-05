@@ -1008,7 +1008,7 @@ class NovaCopilotApp:
                         if thread_id == self.active_thread_id:
                             changed_messages.add((thread_id, message_id))
                             render_finished_thread = True
-                    self._writing_message_ids.discard(message_id)
+                    getattr(self, "_writing_message_ids", set()).discard(message_id)
                     if self.active_request and self.active_request.message_id == message_id:
                         self.active_request = None
                         self.is_sending = False
@@ -1340,3 +1340,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
