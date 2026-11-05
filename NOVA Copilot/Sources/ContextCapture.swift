@@ -10,12 +10,14 @@ struct ContextAttachment: Identifiable {
         case image
         case pdf
         case screenshot
+        case word
 
         var label: String {
             switch self {
             case .image: return "Image"
             case .pdf: return "PDF"
             case .screenshot: return "Screenshot"
+            case .word: return "Word document"
             }
         }
 
@@ -24,6 +26,7 @@ struct ContextAttachment: Identifiable {
             case .image: return "photo"
             case .pdf: return "doc.richtext"
             case .screenshot: return "viewfinder"
+            case .word: return "doc.text"
             }
         }
     }
@@ -47,11 +50,11 @@ enum ContextCaptureError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unsupportedFile:
-            return "Choose an image or PDF file."
+            return "Choose an image, PDF or Word document."
         case .fileTooLarge:
             return "This file is too large to read. Choose a file smaller than 20 MB."
         case .noReadableText:
-            return "NOVA couldn’t find readable text in that file. Try a clearer image or a text-based PDF."
+            return "NOVA couldn’t find readable text. Try a clearer image or a document containing text."
         case .systemCaptureUnavailable:
             return "Screen capture requires macOS 14 or later. You can still add an image or PDF."
         }
@@ -93,6 +96,14 @@ enum ContextTextExtractor {
             throw ContextCaptureError.fileTooLarge
         }
 
+        if WordDocument.isWordFile(url) {
+            return try makeAttachment(
+                name: url.lastPathComponent,
+                kind: .word,
+                text: WordDocument.readText(from: url),
+                previewData: nil
+            )
+        }
         if UTType(filenameExtension: url.pathExtension)?.conforms(to: .pdf) == true {
             return try extractPDF(at: url)
         }

@@ -1,3 +1,11 @@
+# NOVA Copilot Version 1.4.1 (2026-11-05)
+
+- Adds **Word Doc** mode to create a document from a request or fill an attached Word document.
+- Reads `.docx` and `.doc` files as text on the Mac, with a preview before sending their contents to NOVA.
+- Lets you review and edit completed drafts, then save them as `.docx` files using the macOS save dialog.
+- Uses the current request with each newly attached Word document so earlier drafts do not get mixed in.
+- Exports text rather than the original document's formatting, tables or images; documents above the context limit cannot be filled in this mode.
+
 # NOVA Copilot Version 1.4.0 (2026-11-05)
 
 - Adds a context menu for importing images and PDFs, capturing a screen or window on macOS 14+, and adding copied text.

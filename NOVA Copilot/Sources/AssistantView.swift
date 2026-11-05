@@ -65,7 +65,7 @@ struct AssistantView: View {
         .onExitCommand(perform: onHide)
         .fileImporter(
             isPresented: $viewState.showsContextImporter,
-            allowedContentTypes: [.image, .pdf],
+            allowedContentTypes: [.image, .pdf] + WordDocument.importTypes,
             allowsMultipleSelection: false,
             onCompletion: handleContextImport
         )
@@ -126,6 +126,9 @@ struct AssistantView: View {
                     inputFocused = true
                 }
             )
+        }
+        .sheet(item: $viewState.wordDraftReview) { draft in
+            WordDocumentEditor(draft: draft)
         }
     }
 
@@ -243,16 +246,33 @@ struct AssistantView: View {
     }
 
     private var modeBar: some View {
-        HStack(spacing: 8) {
-            Text("MODE").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(muted)
-            Picker("Mode", selection: Binding(get: { model.currentMode }, set: { model.setMode($0) })) {
-                ForEach(NovaMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("MODE").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(muted)
+                Picker("Mode", selection: Binding(get: { model.currentMode }, set: { model.setMode($0) })) {
+                    ForEach(NovaMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .controlSize(.small)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .controlSize(.small)
+            if model.currentMode == .wordDocument {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "doc.text")
+                        .foregroundStyle(accent)
+                    Text("Create a document or add one to fill with details in this message. Saved files contain text only; formatting and images aren’t retained.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button("Add Word…") { viewState.showsContextImporter = true }
+                        .buttonStyle(.plain)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(accent)
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(muted)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
@@ -267,7 +287,9 @@ struct AssistantView: View {
                         welcome
                     } else {
                         ForEach(model.currentThread.messages) { message in
-                            MessageBubble(message: message, accent: accent)
+                            MessageBubble(message: message, accent: accent) {
+                                viewState.wordDraftReview = WordDraftReview(text: message.content)
+                            }
                                 .id(message.id)
                         }
                     }
@@ -440,7 +462,7 @@ struct AssistantView: View {
     private func handleContextDrop(_ providers: [NSItemProvider]) -> Bool {
         guard !providers.isEmpty else { return false }
         guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else {
-            showFeedback("Drop an image or PDF file to add context.", isError: true)
+            showFeedback("Drop an image, PDF or Word document to add context.", isError: true)
             return false
         }
 
@@ -518,6 +540,10 @@ struct AssistantView: View {
             return
         }
         let attachment = viewState.contextAttachment
+        if model.currentMode == .wordDocument, attachment?.wasTruncated == true {
+            showFeedback("This document is too long to fill safely. Try a shorter document or ask about it in another mode.", isError: true)
+            return
+        }
         model.send(contextAttachment: attachment)
         if attachment != nil { viewState.contextAttachment = nil }
     }
@@ -618,7 +644,7 @@ struct AssistantView: View {
                     Button {
                         viewState.showsContextImporter = true
                     } label: {
-                        Label("Add image or PDF…", systemImage: "photo.on.rectangle.angled")
+                        Label("Add image, PDF or Word document…", systemImage: "doc.badge.plus")
                     }
                     if #available(macOS 14.0, *) {
                         Button(action: captureScreenContext) {
@@ -651,9 +677,15 @@ struct AssistantView: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(red: 0.87, green: 0.89, blue: 0.93), lineWidth: 1))
                 }
                 .menuStyle(.borderlessButton)
-                .help("Add an image, PDF, screenshot, or copied text")
+                .help("Add an image, PDF, Word document, screenshot, or copied text")
 
-                TextField(viewState.contextAttachment == nil ? "Message Nova V8…" : "Ask about this context…", text: $model.input, axis: .vertical)
+                TextField(
+                    viewState.contextAttachment == nil
+                        ? (model.currentMode == .wordDocument ? "Describe your Word document…" : "Message Nova V8…")
+                        : (model.currentMode == .wordDocument ? "How should NOVA fill this document?" : "Ask about this context…"),
+                    text: $model.input,
+                    axis: .vertical
+                )
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .lineLimit(1...5)
@@ -666,17 +698,23 @@ struct AssistantView: View {
                     .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(red: 0.84, green: 0.87, blue: 0.92), lineWidth: 1))
 
                 Button { sendMessage() } label: {
-                    Image(systemName: model.isSending ? "stop.fill" : "arrow.up")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(model.isSending ? Color(red: 0.35, green: 0.40, blue: 0.49) : accent, in: RoundedRectangle(cornerRadius: 11))
+                    HStack(spacing: 5) {
+                        Image(systemName: model.isSending ? "stop.fill" : (model.currentMode == .wordDocument ? "doc.text" : "arrow.up"))
+                        if model.currentMode == .wordDocument && !model.isSending {
+                            Text(viewState.contextAttachment?.kind == .word ? "Fill" : "Create")
+                        }
+                    }
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, model.currentMode == .wordDocument && !model.isSending ? 10 : 0)
+                    .frame(minWidth: 38, minHeight: 38)
+                    .background(model.isSending ? Color(red: 0.35, green: 0.40, blue: 0.49) : accent, in: RoundedRectangle(cornerRadius: 11))
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil)
                 .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil ? 0.55 : 1)
-                .help(model.isSending ? "Stop response" : "Send message (⌘Return)")
+                .help(model.isSending ? "Stop response" : (model.currentMode == .wordDocument ? "Create or fill a Word document (⌘Return)" : "Send message (⌘Return)"))
             }
             if viewState.isExtractingContext {
                 HStack(spacing: 7) {
@@ -690,7 +728,7 @@ struct AssistantView: View {
                 contextAttachmentCard(attachment)
             }
             if viewState.isTargetingContext {
-                Text("Drop an image or PDF to review its text")
+                Text("Drop an image, PDF or Word document to review its text")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(accent)
                     .frame(maxWidth: .infinity)
@@ -731,6 +769,7 @@ private final class AssistantViewState: ObservableObject {
     @Published var showsContextImporter = false
     @Published var contextReview: ContextAttachment?
     @Published var contextAttachment: ContextAttachment?
+    @Published var wordDraftReview: WordDraftReview?
     @Published var isExtractingContext = false
     @Published var isTargetingContext = false
     let screenPicker: ScreenContextCapturing?
@@ -791,7 +830,7 @@ private struct ContextReviewPopover: View {
                 }
             }
 
-            Text("NOVA reads text on this Mac. The original image or PDF stays here; only the text below is sent when you submit your question.")
+            Text("NOVA reads text on this Mac. The original file or capture stays here; only the text below is sent when you submit your question.")
                 .font(.system(size: 10.5))
                 .foregroundStyle(muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -828,6 +867,79 @@ private struct ContextReviewPopover: View {
         }
         .padding(14)
         .frame(width: 350)
+    }
+}
+
+private struct WordDraftReview: Identifiable {
+    let id = UUID()
+    let text: String
+}
+
+@MainActor
+private struct WordDocumentEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var text: String
+    @State private var saveError: String?
+
+    init(draft: WordDraftReview) {
+        _text = State(initialValue: draft.text)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Review your Word document")
+                .font(.system(size: 17, weight: .semibold))
+            Text("Edit the text before saving. The Word file contains text; original formatting, tables and images aren’t retained.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            TextEditor(text: $text)
+                .font(.system(size: 12))
+                .accessibilityLabel("Word document text")
+                .frame(minHeight: 250)
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.gray.opacity(0.25)))
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Save Word…", action: saveDocument)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(minWidth: 460, minHeight: 370)
+        .alert("Couldn’t save the Word document", isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "Please try again.")
+        }
+    }
+
+    private func saveDocument() {
+        let draftText = text
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [WordDocument.docxType]
+        panel.nameFieldStringValue = "NOVA Document.docx"
+        panel.canCreateDirectories = true
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            Task { @MainActor in
+                let didStartAccess = url.startAccessingSecurityScopedResource()
+                defer { if didStartAccess { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    let data = try WordDocument.makeData(text: draftText)
+                    try data.write(to: url)
+                    dismiss()
+                } catch {
+                    saveError = error.localizedDescription
+                }
+            }
+        }
     }
 }
 
@@ -1029,6 +1141,7 @@ private struct ClipboardActionPopover: View {
 private struct MessageBubble: View {
     let message: ChatMessage
     let accent: Color
+    let onSaveWord: () -> Void
 
     private var isUser: Bool { message.role == .user }
 
@@ -1060,6 +1173,15 @@ private struct MessageBubble: View {
                         .textSelection(.enabled)
                         .foregroundStyle(isUser ? Color.white : Color(red: 0.12, green: 0.16, blue: 0.23))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if !isUser && message.isWordDocumentDraft == true {
+                    Button(action: onSaveWord) {
+                        Label("Review & Save Word…", systemImage: "square.and.arrow.down")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(accent)
+                    .padding(.top, 7)
                 }
             }
             .padding(.horizontal, 11)

@@ -7,6 +7,19 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>NOVA Copilot software updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.4.1</title>
+      <pubDate>Thu, 05 Nov 2026 06:34:14 GMT</pubDate>
+      <sparkle:version>12</sparkle:version>
+      <sparkle:shortVersionString>1.4.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description sparkle:descriptionFormat="plain-text"><![CDATA[
+- Choose Word Doc mode to create a document or fill an attached Word file.
+- Review and edit the draft, then save it as a .docx. Original formatting, tables and images are not retained.
+- Review extracted Word text before sending it to NOVA.
+]]></description>
+      <enclosure url="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.1.zip" length="4538450" type="application/octet-stream" sparkle:edSignature="UoSB4+9maFEOwrWBMQOlSRMH2/UMew36eQwNKx7rvUibXhoen9lRrNgebFYYl/aFl5fHJdQvLoMgAn3uMuuwDw=="></enclosure>
+    </item>
+    <item>
       <title>Version 1.4.0</title>
       <pubDate>Thu, 05 Nov 2026 05:27:52 GMT</pubDate>
       <sparkle:version>11</sparkle:version>
@@ -49,6 +62,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: jD0FJ/4NebNP6klh0WmGGLKlXNP10oog2WsXkaR0UXZHN6mCnEcYBXa4pxX8AqWmv4T5SgWWaeJu/BGfAhx5CA==
-length: 3417
+edSignature: 5hP1RATgpdon9xfNfVQCmO2WITTjAcKzm+IHk8vpChQfoAf66Qi/KGdEyuC+o5i1IDhogk/b0nD6NkmuS9POBA==
+length: 4318
 -->
