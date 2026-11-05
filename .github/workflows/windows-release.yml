@@ -31,6 +31,17 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
+      - name: Align the published tag with the manual build source
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release view "$env:RELEASE_TAG" --repo "$env:GITHUB_REPOSITORY"
+          git tag --force "$env:RELEASE_TAG" "$env:GITHUB_SHA"
+          git push origin "refs/tags/$env:RELEASE_TAG" --force
+
       - name: Install dependencies
         run: python -m pip install -r "NOVA Copilot Windows/requirements.txt" "pyinstaller==6.22.3"
 
