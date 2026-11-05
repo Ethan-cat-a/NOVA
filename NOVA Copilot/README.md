@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS version" src="https://img.shields.io/badge/macOS-1.3.5-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p><img alt="macOS version" src="https://img.shields.io/badge/macOS-1.4.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
   <p>Released November 5, 2026.</p>
-  <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.5.zip"><strong>↓ Download latest release for Mac · 1.3.5</strong></a></p>
+  <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.0.zip"><strong>↓ Download latest release for Mac · 1.4.0</strong></a></p>
 </div>
 
 ---
@@ -17,15 +17,17 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 | **Stay in your flow** | **Choose how to think** | **Keep control** |
 | --- | --- | --- |
-| Menu-bar access, a floating panel, animated right-edge launcher and manual update button. | Fast, Hard Thinker and Coding modes, plus one-click summary and rewrite actions for copied text. | Stop replies, keep local history and share clipboard text only when requested. |
+| Menu-bar access, a floating panel, animated right-edge launcher and manual update button. | Fast, Hard Thinker and Coding modes, plus one-click summary and rewrite actions for copied text. | Review text extracted from screenshots, images or PDFs before sending it to NOVA. |
 
 - Streaming responses as Nova generates them.
 - Recent conversations to pick up where you left off.
 - Optional Launch at Login and Keep on Top.
+- Image and PDF OCR runs locally. NOVA receives only the text you approve, not the original file.
+- Screen and window capture uses the macOS 14+ system picker; image and PDF import works on macOS 13+.
 
 ## Install
 
-1. [Download the Mac app ZIP](https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.5.zip).
+1. [Download the Mac app ZIP](https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.0.zip).
 2. Double-click the ZIP to expand it, then drag **NOVA Copilot.app** to **Applications**.
 3. Launch NOVA Copilot from Applications.
 

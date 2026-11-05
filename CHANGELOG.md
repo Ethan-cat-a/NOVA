@@ -1,3 +1,10 @@
+# NOVA Copilot Version 1.4.0 (2026-11-05)
+
+- Adds a context menu for importing images and PDFs, capturing a screen or window on macOS 14+, and adding copied text.
+- Extracts readable text from images, PDFs and captures locally with Apple Vision; review it before sending it with a question.
+- Keeps the original image or PDF on the Mac. NOVA V8 receives only the approved extracted text, with a 15,000-character limit.
+- Adds PDF page limits and import size limits to keep context capture responsive.
+
 # NOVA Copilot Version 1.3.5 (2026-11-05)
 
 - Shows the installed version when NOVA is up to date and both installed and available versions when an update is found.

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct AssistantView: View {
     @ObservedObject var model: NovaChatModel
@@ -62,6 +63,13 @@ struct AssistantView: View {
         .background(Color(red: 0.975, green: 0.980, blue: 0.988))
         .preferredColorScheme(.light)
         .onExitCommand(perform: onHide)
+        .fileImporter(
+            isPresented: $viewState.showsContextImporter,
+            allowedContentTypes: [.image, .pdf],
+            allowsMultipleSelection: false,
+            onCompletion: handleContextImport
+        )
+        .onDrop(of: [UTType.fileURL.identifier], isTargeted: $viewState.isTargetingContext, perform: handleContextDrop)
         .onAppear {
             inputFocused = true
             if let error = model.lastError { showNotice("NOVA Copilot", message: error) }
@@ -107,6 +115,17 @@ struct AssistantView: View {
                 }
             )
             .padding(6)
+        }
+        .popover(item: $viewState.contextReview, arrowEdge: .bottom) { attachment in
+            ContextReviewPopover(
+                attachment: attachment,
+                onCancel: { viewState.contextReview = nil },
+                onUse: {
+                    viewState.contextAttachment = attachment
+                    viewState.contextReview = nil
+                    inputFocused = true
+                }
+            )
         }
     }
 
@@ -393,6 +412,8 @@ struct AssistantView: View {
     private func runClipboardQuickAction(_ action: ClipboardQuickAction) {
         if model.isSending {
             showFeedback("Finish the current reply before starting a clipboard action.", isError: true)
+        } else if viewState.contextAttachment != nil {
+            showFeedback("Send or remove the reviewed attachment before starting a clipboard action.", isError: true)
         } else if !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             showFeedback("Send or clear your draft before starting a clipboard action.", isError: true)
         } else if let snapshot = model.clipboardTextSnapshot() {
@@ -400,6 +421,145 @@ struct AssistantView: View {
         } else {
             showFeedback("No copied text found. Copy some text first, then try again.", isError: true)
         }
+    }
+
+    private func handleContextImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            importContextFile(url)
+        case .failure(let error):
+            showFeedback("Couldn’t open that file: \(error.localizedDescription)", isError: true)
+        }
+    }
+
+    private func handleContextDrop(_ providers: [NSItemProvider]) -> Bool {
+        guard !providers.isEmpty else { return false }
+        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else {
+            showFeedback("Drop an image or PDF file to add context.", isError: true)
+            return false
+        }
+
+        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, error in
+            let droppedURL: URL?
+            if let url = item as? URL {
+                droppedURL = url
+            } else if let url = item as? NSURL {
+                droppedURL = url as URL
+            } else if let data = item as? Data,
+                      let string = String(data: data, encoding: .utf8) {
+                droppedURL = URL(string: string.trimmingCharacters(in: .whitespacesAndNewlines))
+            } else {
+                droppedURL = nil
+            }
+            DispatchQueue.main.async {
+                if let droppedURL {
+                    importContextFile(droppedURL)
+                } else {
+                    showFeedback("Couldn’t read that dropped file. Try choosing it with the paperclip menu.", isError: true)
+                }
+            }
+        }
+        return true
+    }
+
+    private func importContextFile(_ url: URL) {
+        guard !model.isSending else {
+            showFeedback("Wait for the current reply to finish before adding context.", isError: true)
+            return
+        }
+        viewState.contextAttachment = nil
+        viewState.isExtractingContext = true
+        Task {
+            defer { viewState.isExtractingContext = false }
+            do {
+                viewState.contextReview = try await ContextTextExtractor.readFile(at: url)
+            } catch {
+                showFeedback(error.localizedDescription, isError: true)
+            }
+        }
+    }
+
+    private func captureScreenContext() {
+        guard !model.isSending else {
+            showFeedback("Wait for the current reply to finish before capturing context.", isError: true)
+            return
+        }
+        guard #available(macOS 14.0, *), let screenPicker = viewState.screenPicker else {
+            showFeedback(ContextCaptureError.systemCaptureUnavailable.localizedDescription, isError: true)
+            return
+        }
+        viewState.isExtractingContext = true
+        do {
+            try screenPicker.present { result in
+                viewState.isExtractingContext = false
+                switch result {
+                case .success(let attachment):
+                    viewState.contextReview = attachment
+                case .failure(let error) where error is CancellationError:
+                    break
+                case .failure(let error):
+                    showFeedback("Couldn’t read the capture: \(error.localizedDescription)", isError: true)
+                }
+            }
+        } catch {
+            viewState.isExtractingContext = false
+            showFeedback(error.localizedDescription, isError: true)
+        }
+    }
+
+    private func sendMessage() {
+        if model.isSending {
+            model.send()
+            return
+        }
+        let attachment = viewState.contextAttachment
+        model.send(contextAttachment: attachment)
+        if attachment != nil { viewState.contextAttachment = nil }
+    }
+
+    @ViewBuilder
+    private func contextAttachmentCard(_ attachment: ContextAttachment) -> some View {
+        HStack(spacing: 8) {
+            if let data = attachment.previewData, let image = NSImage(data: data) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 38, height: 38)
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+            } else {
+                Image(systemName: attachment.kind.icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 38, height: 38)
+                    .background(accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(attachment.name)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                Text("\(attachment.kind.label) · \(attachment.extractedText.count.formatted()) characters ready")
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(muted)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            Button("Review") { viewState.contextReview = attachment }
+                .buttonStyle(.plain)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(accent)
+            Button { viewState.contextAttachment = nil } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(muted)
+            }
+            .buttonStyle(.plain)
+            .help("Remove context")
+        }
+        .padding(7)
+        .background(Color(red: 0.975, green: 0.980, blue: 0.988), in: RoundedRectangle(cornerRadius: 9))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color(red: 0.89, green: 0.91, blue: 0.94), lineWidth: 1))
     }
 
     private func showFeedback(_ message: String, isError: Bool = false) {
@@ -450,13 +610,34 @@ struct AssistantView: View {
                 .foregroundStyle(Color.orange)
             }
             HStack(alignment: .bottom, spacing: 8) {
-                Button {
-                    if model.insertClipboardContext() {
-                        showNotice("Clipboard", message: "Copied text added to your draft.")
-                    } else {
-                        showNotice("Clipboard", message: "No text found. Copy some text in any app first.")
+                Menu {
+                    Button {
+                        viewState.showsContextImporter = true
+                    } label: {
+                        Label("Add image or PDF…", systemImage: "photo.on.rectangle.angled")
                     }
-                    inputFocused = true
+                    if #available(macOS 14.0, *) {
+                        Button(action: captureScreenContext) {
+                            Label("Capture a window or screen…", systemImage: "viewfinder")
+                        }
+                    } else {
+                        Button {
+                            showFeedback(ContextCaptureError.systemCaptureUnavailable.localizedDescription, isError: true)
+                        } label: {
+                            Label("Capture a window or screen… (macOS 14+)", systemImage: "viewfinder")
+                        }
+                    }
+                    Divider()
+                    Button {
+                        if model.insertClipboardContext() {
+                            showFeedback("Copied text added to your draft.")
+                        } else {
+                            showFeedback("No copied text found. Copy some text in any app first.", isError: true)
+                        }
+                        inputFocused = true
+                    } label: {
+                        Label("Add copied text", systemImage: "doc.on.clipboard")
+                    }
                 } label: {
                     Image(systemName: "paperclip")
                         .font(.system(size: 14, weight: .semibold))
@@ -465,22 +646,22 @@ struct AssistantView: View {
                         .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(red: 0.87, green: 0.89, blue: 0.93), lineWidth: 1))
                 }
-                .buttonStyle(.plain)
-                .help("Attach text from your clipboard")
+                .menuStyle(.borderlessButton)
+                .help("Add an image, PDF, screenshot, or copied text")
 
-                TextField("Message Nova V8…", text: $model.input, axis: .vertical)
+                TextField(viewState.contextAttachment == nil ? "Message Nova V8…" : "Ask about this context…", text: $model.input, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .lineLimit(1...5)
                     .focused($inputFocused)
-                    .onSubmit { model.send() }
+                    .onSubmit { sendMessage() }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .frame(minHeight: 38)
                     .background(.white, in: RoundedRectangle(cornerRadius: 11))
                     .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(red: 0.84, green: 0.87, blue: 0.92), lineWidth: 1))
 
-                Button { model.send() } label: {
+                Button { sendMessage() } label: {
                     Image(systemName: model.isSending ? "stop.fill" : "arrow.up")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.white)
@@ -489,9 +670,28 @@ struct AssistantView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return, modifiers: .command)
-                .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1)
+                .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil)
+                .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil ? 0.55 : 1)
                 .help(model.isSending ? "Stop response" : "Send message (⌘Return)")
+            }
+            if viewState.isExtractingContext {
+                HStack(spacing: 7) {
+                    ProgressView().controlSize(.small).scaleEffect(0.75)
+                    Text("Reading text on this Mac…")
+                    Spacer(minLength: 0)
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(muted)
+            } else if let attachment = viewState.contextAttachment {
+                contextAttachmentCard(attachment)
+            }
+            if viewState.isTargetingContext {
+                Text("Drop an image or PDF to review its text")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
             }
             HStack(spacing: 5) {
                 Text("⌘Return to send")
@@ -524,11 +724,22 @@ private final class AssistantViewState: ObservableObject {
     @Published var feedbackMessage: String?
     @Published var feedbackIsError = false
     @Published var showMoreExamples = false
+    @Published var showsContextImporter = false
+    @Published var contextReview: ContextAttachment?
+    @Published var contextAttachment: ContextAttachment?
+    @Published var isExtractingContext = false
+    @Published var isTargetingContext = false
+    let screenPicker: ScreenContextCapturing?
 
     private static let rewriteToneKey = "com.novatech.NOVACompanion.rewriteTone"
     private static let firstRunTipDismissedKey = "com.novatech.NOVACompanion.firstRunTipDismissed"
 
     init() {
+        if #available(macOS 14.0, *) {
+            screenPicker = ScreenContextPicker()
+        } else {
+            screenPicker = nil
+        }
         rewriteTone = RewriteTone(rawValue: UserDefaults.standard.string(forKey: Self.rewriteToneKey) ?? "") ?? .natural
         showFirstRunTip = !UserDefaults.standard.bool(forKey: Self.firstRunTipDismissedKey)
     }
@@ -537,6 +748,82 @@ private final class AssistantViewState: ObservableObject {
         guard showFirstRunTip else { return }
         showFirstRunTip = false
         UserDefaults.standard.set(true, forKey: Self.firstRunTipDismissedKey)
+    }
+}
+
+private struct ContextReviewPopover: View {
+    let attachment: ContextAttachment
+    let onCancel: () -> Void
+    let onUse: () -> Void
+
+    private let ink = Color(red: 0.09, green: 0.13, blue: 0.20)
+    private let muted = Color(red: 0.40, green: 0.45, blue: 0.54)
+    private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(spacing: 9) {
+                if let data = attachment.previewData, let image = NSImage(data: data) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Image(systemName: attachment.kind.icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: 42, height: 42)
+                        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Review context")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ink)
+                    Text(attachment.name)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(muted)
+                        .lineLimit(1)
+                }
+            }
+
+            Text("NOVA reads text on this Mac. The original image or PDF stays here; only the text below is sent when you submit your question.")
+                .font(.system(size: 10.5))
+                .foregroundStyle(muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ScrollView {
+                Text(attachment.extractedText)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(ink)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(9)
+            }
+            .frame(height: 190)
+            .background(Color(red: 0.975, green: 0.980, blue: 0.988), in: RoundedRectangle(cornerRadius: 8))
+
+            HStack {
+                Text(attachment.wasTruncated
+                     ? "First \(attachment.extractedText.count.formatted()) of \(attachment.originalCharacterCount.formatted()) characters"
+                     : "\(attachment.extractedText.count.formatted()) characters")
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(muted)
+                Spacer(minLength: 0)
+            }
+
+            HStack {
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Use extracted text", action: onUse)
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(14)
+        .frame(width: 350)
     }
 }
 
@@ -763,7 +1050,7 @@ private struct MessageBubble: View {
                     }
                     .padding(.vertical, 4)
                 } else {
-                    Text(message.content)
+                    Text(message.displayContent ?? message.content)
                         .font(.system(size: 12.5))
                         .lineSpacing(3)
                         .textSelection(.enabled)

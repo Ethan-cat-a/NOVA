@@ -4,14 +4,14 @@
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
   <p>
-    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.5.zip"><strong>Download latest macOS release · 1.3.5</strong></a>
+    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.0.zip"><strong>Download latest macOS release · 1.4.0</strong></a>
     &nbsp; · &nbsp;
     <a href="NOVA%20Copilot%20Windows/README.md"><strong>Get started on Windows</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.3.5-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.4.0-263C63?style=flat-square&logo=apple&logoColor=white" />
     <img alt="Windows" src="https://img.shields.io/badge/Windows-1.0.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
@@ -25,7 +25,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Version 1.3.5 · Native Swift / AppKit</strong></p>
+      <p><strong>Version 1.4.0 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with a menu-bar control, floating assistant panel and quick keyboard access.</p>
       <ul>
         <li>macOS 13 or later</li>
@@ -34,8 +34,9 @@
         <li>Local conversation history</li>
         <li>Daily and manual update checks with version details and release notes before approval</li>
         <li>One-click summarize and rewrite actions for copied text</li>
+        <li>Review OCR text from screenshots, images and PDFs before asking NOVA</li>
       </ul>
-      <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.3.5.zip"><strong>↓ Download Mac app ZIP · 1.3.5</strong></a></p>
+      <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.0.zip"><strong>↓ Download Mac app ZIP · 1.4.0</strong></a></p>
       <p><sub>Users on 1.2.0, 1.3.0, or 1.3.1 must install 1.3.2 manually once; users on 1.3.2 can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
@@ -107,6 +108,8 @@ The Mac and Windows editions share the same product identity and NOVA V8 service
 - Requests are sent to the existing `https://nova-v8.vercel.app/api/chat` endpoint.
 - Conversation history is stored locally by each edition.
 - Clipboard text is only read when you explicitly choose the clipboard action.
+- Images and PDFs are read on your Mac. NOVA V8 receives only the extracted text after you review and send it.
+- Screen/window capture uses the macOS 14 or later picker; importing images and PDFs works on macOS 13 or later.
 
 ## Project layout
 
@@ -120,6 +123,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for macOS — 1.4.0](CHANGELOG.md#nova-copilot-version-140-2026-11-05)
 - [NOVA Copilot for macOS — 1.3.5](CHANGELOG.md#nova-copilot-version-135-2026-11-05)
 - [NOVA Copilot for macOS — 1.3.3](CHANGELOG.md#nova-copilot-version-133)
 - [NOVA Copilot for macOS — 1.3.2](CHANGELOG.md#nova-copilot-version-132)

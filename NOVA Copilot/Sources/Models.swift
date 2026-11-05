@@ -108,6 +108,7 @@ struct ChatMessage: Codable, Identifiable {
     var id: UUID = UUID()
     var role: MessageRole
     var content: String
+    var displayContent: String? = nil
     var createdAt: Date = Date()
 }
 
