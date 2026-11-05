@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS version" src="https://img.shields.io/badge/macOS-1.4.1-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p><img alt="macOS version" src="https://img.shields.io/badge/macOS-1.4.2-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
   <p>Released November 5, 2026.</p>
-  <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.1.zip"><strong>↓ Download latest release for Mac · 1.4.1</strong></a></p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.4.2/NOVA-Copilot-1.4.2.zip"><strong>↓ Download latest release for Mac · 1.4.2</strong></a></p>
 </div>
 
 ---
@@ -30,7 +30,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the Mac app ZIP](https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.1.zip).
+1. [Download the Mac app ZIP](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.4.2/NOVA-Copilot-1.4.2.zip).
 2. Double-click the ZIP to expand it, then drag **NOVA Copilot.app** to **Applications**.
 3. Launch NOVA Copilot from Applications.
 

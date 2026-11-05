@@ -287,9 +287,15 @@ struct AssistantView: View {
                         welcome
                     } else {
                         ForEach(model.currentThread.messages) { message in
-                            MessageBubble(message: message, accent: accent) {
-                                viewState.wordDraftReview = WordDraftReview(text: message.content)
-                            }
+                            MessageBubble(
+                                message: message,
+                                accent: accent,
+                                isStreaming: model.streamingMessageID == message.id,
+                                canRetry: model.canRetryResponse(message.id),
+                                onCopy: { copyResponse(message.content) },
+                                onRetry: { model.retryResponse(message.id) },
+                                onSaveWord: { viewState.wordDraftReview = WordDraftReview(text: message.content) }
+                            )
                                 .id(message.id)
                         }
                     }
@@ -304,7 +310,8 @@ struct AssistantView: View {
                 withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
             }
             .onChange(of: model.currentThread.messages.last?.content) { content in
-                guard model.isSending, content != nil else { return }
+                guard content != nil,
+                      model.streamingMessageID == model.currentThread.messages.last?.id else { return }
                 proxy.scrollTo("conversation-bottom", anchor: .bottom)
             }
             .onChange(of: model.activeThreadID) { _ in
@@ -548,6 +555,12 @@ struct AssistantView: View {
         if attachment != nil { viewState.contextAttachment = nil }
     }
 
+    private func copyResponse(_ content: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(content, forType: .string)
+        showFeedback("Copied NOVA’s response.")
+    }
+
     @ViewBuilder
     private func contextAttachmentCard(_ attachment: ContextAttachment) -> some View {
         HStack(spacing: 8) {
@@ -700,13 +713,15 @@ struct AssistantView: View {
                 Button { sendMessage() } label: {
                     HStack(spacing: 5) {
                         Image(systemName: model.isSending ? "stop.fill" : (model.currentMode == .wordDocument ? "doc.text" : "arrow.up"))
-                        if model.currentMode == .wordDocument && !model.isSending {
+                        if model.isSending {
+                            Text("Stop")
+                        } else if model.currentMode == .wordDocument {
                             Text(viewState.contextAttachment?.kind == .word ? "Fill" : "Create")
                         }
                     }
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, model.currentMode == .wordDocument && !model.isSending ? 10 : 0)
+                    .padding(.horizontal, (model.currentMode == .wordDocument && !model.isSending) || model.isSending ? 10 : 0)
                     .frame(minWidth: 38, minHeight: 38)
                     .background(model.isSending ? Color(red: 0.35, green: 0.40, blue: 0.49) : accent, in: RoundedRectangle(cornerRadius: 11))
                 }
@@ -714,6 +729,7 @@ struct AssistantView: View {
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil)
                 .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachment == nil ? 0.55 : 1)
+                .accessibilityLabel(model.isSending ? "Stop response" : "Send message")
                 .help(model.isSending ? "Stop response" : (model.currentMode == .wordDocument ? "Create or fill a Word document (⌘Return)" : "Send message (⌘Return)"))
             }
             if viewState.isExtractingContext {
@@ -1141,6 +1157,10 @@ private struct ClipboardActionPopover: View {
 private struct MessageBubble: View {
     let message: ChatMessage
     let accent: Color
+    let isStreaming: Bool
+    let canRetry: Bool
+    let onCopy: () -> Void
+    let onRetry: () -> Void
     let onSaveWord: () -> Void
 
     private var isUser: Bool { message.role == .user }
@@ -1160,10 +1180,10 @@ private struct MessageBubble: View {
                 if !isUser {
                     Text("NOVA V8").font(.system(size: 9, weight: .bold)).tracking(0.7).foregroundStyle(Color(red: 0.35, green: 0.40, blue: 0.50))
                 }
-                if message.content.isEmpty && !isUser {
+                if message.content.isEmpty && !isUser && isStreaming {
                     HStack(spacing: 5) {
                         ProgressView().controlSize(.small).scaleEffect(0.7)
-                        Text("Thinking…").font(.system(size: 12)).foregroundStyle(Color.secondary)
+                        Text("NOVA is thinking…").font(.system(size: 12)).foregroundStyle(Color.secondary)
                     }
                     .padding(.vertical, 4)
                 } else {
@@ -1174,11 +1194,38 @@ private struct MessageBubble: View {
                         .foregroundStyle(isUser ? Color.white : Color(red: 0.12, green: 0.16, blue: 0.23))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if !isUser && message.isWordDocumentDraft == true {
-                    Button(action: onSaveWord) {
-                        Label("Review & Save Word…", systemImage: "square.and.arrow.down")
-                            .font(.system(size: 10, weight: .semibold))
+                if !isUser && isStreaming && !message.content.isEmpty {
+                    HStack(spacing: 5) {
+                        ProgressView().controlSize(.small).scaleEffect(0.62)
+                        Text("NOVA is writing…")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.secondary)
                     }
+                    .padding(.top, 4)
+                    .accessibilityElement(children: .combine)
+                }
+                if !isUser && !message.content.isEmpty && !isStreaming {
+                    HStack(spacing: 12) {
+                        Button(action: onCopy) {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                        .help("Copy NOVA’s response")
+
+                        if canRetry {
+                            Button(action: onRetry) {
+                                Label("Try again", systemImage: "arrow.clockwise")
+                            }
+                            .help("Regenerate this response")
+                        }
+
+                        if message.isWordDocumentDraft == true {
+                            Button(action: onSaveWord) {
+                                Label("Review & Save Word…", systemImage: "square.and.arrow.down")
+                            }
+                            .help("Review and save this response as a Word document")
+                        }
+                    }
+                    .font(.system(size: 10, weight: .semibold))
                     .buttonStyle(.plain)
                     .foregroundStyle(accent)
                     .padding(.top, 7)

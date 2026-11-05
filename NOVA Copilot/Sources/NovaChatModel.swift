@@ -9,15 +9,17 @@ final class NovaChatModel: ObservableObject {
     @Published var input: String = ""
     @Published private(set) var isSending = false
     @Published private(set) var isCheckingConnection = false
+    @Published private(set) var streamingMessageID: UUID?
     @Published private(set) var connectionStatus = "Connecting to Nova…"
     @Published private(set) var isConnected = false
     @Published private(set) var lastError: String?
 
     private let storageKey = "com.novatech.NOVACompanion.threads.v1"
     private var requestTask: Task<Void, Never>?
-    private var failedRequest: FailedRequest?
+    private var failedRequest: RetryableRequest?
+    private var retryableRequests: [UUID: RetryableRequest] = [:]
 
-    private struct FailedRequest {
+    private struct RetryableRequest {
         let threadID: UUID
         let userMessageID: UUID
         let responseMessageID: UUID
@@ -31,6 +33,13 @@ final class NovaChatModel: ObservableObject {
               let failedRequest,
               let thread = threads.first(where: { $0.id == failedRequest.threadID }) else { return false }
         return thread.messages.contains(where: { $0.id == failedRequest.userMessageID })
+    }
+
+    func canRetryResponse(_ responseMessageID: UUID) -> Bool {
+        guard !isSending,
+              failedRequest?.responseMessageID != responseMessageID,
+              currentThread.messages.last?.id == responseMessageID else { return false }
+        return retryableRequests[responseMessageID] != nil
     }
 
     var currentThread: ChatThread {
@@ -79,6 +88,7 @@ final class NovaChatModel: ObservableObject {
     func clearCurrentChat() {
         guard !isSending else { stop() ; return }
         if failedRequest?.threadID == activeThreadID { failedRequest = nil }
+        discardRetryableRequests(in: activeThreadID)
         updateThread(activeThreadID) { $0.messages = []; $0.title = "New chat"; $0.updatedAt = Date() }
         lastError = nil
         save()
@@ -203,10 +213,6 @@ final class NovaChatModel: ObservableObject {
               thread.messages.contains(where: { $0.id == failedRequest.userMessageID }) else { return }
 
         activeThreadID = failedRequest.threadID
-        updateThread(failedRequest.threadID) { current in
-            current.messages.removeAll(where: { $0.id == failedRequest.responseMessageID })
-        }
-        save()
         input = failedRequest.prompt
         lastError = nil
         startRequest(
@@ -215,7 +221,25 @@ final class NovaChatModel: ObservableObject {
             existingUserMessageID: failedRequest.userMessageID,
             displayContent: nil,
             responseMode: failedRequest.mode,
-            isolateWordSource: failedRequest.isolateWordSource
+            isolateWordSource: failedRequest.isolateWordSource,
+            existingResponseMessageID: failedRequest.responseMessageID
+        )
+    }
+
+    func retryResponse(_ responseMessageID: UUID) {
+        guard canRetryResponse(responseMessageID),
+              let request = retryableRequests[responseMessageID] else { return }
+
+        input = request.prompt
+        lastError = nil
+        startRequest(
+            prompt: request.prompt,
+            threadID: request.threadID,
+            existingUserMessageID: request.userMessageID,
+            displayContent: nil,
+            responseMode: request.mode,
+            isolateWordSource: request.isolateWordSource,
+            existingResponseMessageID: request.responseMessageID
         )
     }
 
@@ -225,7 +249,8 @@ final class NovaChatModel: ObservableObject {
         existingUserMessageID: UUID?,
         displayContent: String? = nil,
         responseMode: NovaMode? = nil,
-        isolateWordSource: Bool = false
+        isolateWordSource: Bool = false,
+        existingResponseMessageID: UUID? = nil
     ) {
         input = ""
         lastError = nil
@@ -247,8 +272,28 @@ final class NovaChatModel: ObservableObject {
             )
         }
 
-        let responseID = UUID()
-        appendMessage(ChatMessage(id: responseID, role: .assistant, content: ""), to: threadID)
+        let responseID: UUID
+        if let existingResponseMessageID {
+            responseID = existingResponseMessageID
+            updateMessage(responseID, threadID: threadID) { message in
+                message.content = ""
+                message.isWordDocumentDraft = nil
+            }
+        } else {
+            responseID = UUID()
+            appendMessage(ChatMessage(id: responseID, role: .assistant, content: ""), to: threadID)
+        }
+        let retryableRequest = RetryableRequest(
+            threadID: threadID,
+            userMessageID: userMessageID,
+            responseMessageID: responseID,
+            prompt: prompt,
+            mode: requestMode,
+            isolateWordSource: isolateWordSource
+        )
+        discardRetryableRequests(in: threadID)
+        retryableRequests[responseID] = retryableRequest
+        streamingMessageID = responseID
         isSending = true
         connectionStatus = "Nova is thinking…"
 
@@ -290,16 +335,10 @@ final class NovaChatModel: ObservableObject {
                 self.connectionStatus = "Response stopped"
             } catch {
                 self.finishResponse(responseID, threadID: threadID, error: error.localizedDescription)
-                self.failedRequest = FailedRequest(
-                    threadID: threadID,
-                    userMessageID: userMessageID,
-                    responseMessageID: responseID,
-                    prompt: prompt,
-                    mode: requestMode,
-                    isolateWordSource: isolateWordSource
-                )
+                self.failedRequest = retryableRequest
             }
             self.isSending = false
+            self.streamingMessageID = nil
             self.requestTask = nil
             if self.isConnected && self.lastError == nil { self.connectionStatus = "Nova V8 connected" }
         }
@@ -350,6 +389,13 @@ final class NovaChatModel: ObservableObject {
         guard let index = threads.firstIndex(where: { $0.id == id }) else { return }
         transform(&threads[index])
         threads.sort { $0.updatedAt > $1.updatedAt }
+    }
+
+    private func discardRetryableRequests(in threadID: UUID) {
+        let ids = retryableRequests.compactMap { id, request in
+            request.threadID == threadID ? id : nil
+        }
+        for id in ids { retryableRequests.removeValue(forKey: id) }
     }
 
     private func save() {

@@ -1,3 +1,9 @@
+# NOVA Copilot Version 1.4.2 (2026-11-05)
+
+- Shows a clear thinking or writing indicator while NOVA streams a response, with a labeled Stop button.
+- Adds Copy to completed replies and Try again to the latest reply.
+- Regenerates the latest reply in the same mode and with its original document context when applicable.
+
 # NOVA Copilot Version 1.4.1 (2026-11-05)
 
 - Adds **Word Doc** mode to create a document from a request or fill an attached Word document.
