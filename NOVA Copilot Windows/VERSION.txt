@@ -1,5 +1,5 @@
 NOVA Copilot for Windows
-Version: 1.4.2
+Version: 1.5.0
 Target: Windows 10 / Windows 11
-Backend: https://nova-v8.vercel.app/api/chat
+Backend: https://nova-copilot-gateway.vercel.app/api/chat
 Shortcut: Ctrl+Shift+Space

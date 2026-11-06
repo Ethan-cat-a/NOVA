@@ -52,25 +52,14 @@ jobs:
         working-directory: NOVA Copilot Windows
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "NOVA Copilot" --hidden-import pystray._win32 --collect-all docx app.py
 
-      - name: Package downloadable app
+      - name: Prepare standalone app download
         shell: pwsh
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
         run: |
-          $package = Join-Path $env:RUNNER_TEMP "nova-windows-package"
           $version = $env:RELEASE_TAG -replace '^windows-v', ''
-          $asset = "NOVA-Copilot-Windows-$version.zip"
-          New-Item -ItemType Directory -Force -Path $package | Out-Null
-          Copy-Item "NOVA Copilot Windows/dist/NOVA Copilot.exe" (Join-Path $package "NOVA Copilot.exe")
-          $instructions = @(
-            "NOVA Copilot for Windows $version",
-            "",
-            "Extract this ZIP and open NOVA Copilot.exe. Python is not required.",
-            "Windows SmartScreen may warn because this app is not code-signed.",
-            "Only run this file if it came from the official NOVA GitHub release."
-          )
-          $instructions | Set-Content -Encoding utf8 (Join-Path $package "README.txt")
-          Compress-Archive -Path (Join-Path $package "*") -DestinationPath (Join-Path $env:GITHUB_WORKSPACE $asset) -Force
+          $asset = "NOVA-Copilot-Windows-$version.exe"
+          Copy-Item "NOVA Copilot Windows/dist/NOVA Copilot.exe" (Join-Path $env:GITHUB_WORKSPACE $asset)
           "RELEASE_ASSET=$asset" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Upload app to the GitHub release

@@ -27,8 +27,10 @@ except Exception:  # Tray support is optional when running directly from source.
     Image = ImageDraw = ImageFont = None
 
 APP_NAME = "NOVA Copilot"
-APP_VERSION = "1.4.2"
-CHAT_URL = "https://nova-v8.vercel.app/api/chat"
+APP_VERSION = "1.5.0"
+CHAT_URL = "https://nova-copilot-gateway.vercel.app/api/chat"
+SUPABASE_URL = "https://nhzpodixkjhynvcwnzok.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_LqyBAJMOMir72jmLcziX_A_wArHa_L0"
 GITHUB_RELEASES_URL = "https://api.github.com/repos/Ethan-cat-a/NOVA/releases?per_page=100"
 HOTKEY_LABEL = "Ctrl + Shift + Space"
 CONTEXT_LIMIT = 15_000
@@ -56,6 +58,39 @@ MODE_INSTRUCTIONS = {
     "Hard Thinker": "Take extra time to analyze the task carefully. Check assumptions, reason through important steps, consider alternatives and edge cases, and verify calculations when possible. Present the conclusion and key rationale clearly without exposing private chain-of-thought.",
     "Coding": "Act as a senior software engineer. Provide practical, runnable code when appropriate, with sensible defaults, clear structure, and robust error handling. For debugging, identify the likely root cause and give corrected code. Include concise setup or usage notes and avoid pseudocode unless requested.",
 }
+
+
+class _DataBlob(ctypes.Structure):
+    _fields_ = [("cbData", ctypes.wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.wintypes.BYTE))]
+
+
+def _dpapi(data: bytes, *, protect: bool) -> bytes:
+    input_buffer = ctypes.create_string_buffer(data)
+    input_blob = _DataBlob(len(data), ctypes.cast(input_buffer, ctypes.POINTER(ctypes.wintypes.BYTE)))
+    output_blob = _DataBlob()
+    crypt32 = ctypes.windll.crypt32
+    crypt = crypt32.CryptProtectData if protect else crypt32.CryptUnprotectData
+    crypt.restype = ctypes.wintypes.BOOL
+    if protect:
+        crypt.argtypes = [ctypes.POINTER(_DataBlob), ctypes.wintypes.LPCWSTR, ctypes.POINTER(_DataBlob), ctypes.wintypes.LPVOID, ctypes.wintypes.LPVOID, ctypes.wintypes.DWORD, ctypes.POINTER(_DataBlob)]
+        ok = crypt(ctypes.byref(input_blob), "NOVA Copilot account session", None, None, None, 1, ctypes.byref(output_blob))
+    else:
+        crypt.argtypes = [ctypes.POINTER(_DataBlob), ctypes.POINTER(ctypes.wintypes.LPWSTR), ctypes.POINTER(_DataBlob), ctypes.wintypes.LPVOID, ctypes.wintypes.LPVOID, ctypes.wintypes.DWORD, ctypes.POINTER(_DataBlob)]
+        ok = crypt(ctypes.byref(input_blob), None, None, None, None, 1, ctypes.byref(output_blob))
+    if not ok:
+        raise OSError(ctypes.get_last_error(), "Windows could not protect the NOVA account session.")
+    try:
+        return ctypes.string_at(output_blob.pbData, output_blob.cbData)
+    finally:
+        local_free = ctypes.windll.kernel32.LocalFree
+        local_free.argtypes = [ctypes.c_void_p]
+        local_free.restype = ctypes.c_void_p
+        local_free(ctypes.cast(output_blob.pbData, ctypes.c_void_p))
+
+
+def _auth_session_path() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(local_app_data) / APP_NAME / "account-session.dat"
 
 
 class ActiveRequest:
@@ -213,6 +248,7 @@ class NovaCopilotApp:
         self.root.option_add("*Font", "Segoe UI 10")
 
         self.threads = load_threads()
+        self.auth_session = self._load_auth_session()
         self.active_thread_id = self.threads[0]["id"]
         self.is_sending = False
         self.active_request: ActiveRequest | None = None
@@ -233,6 +269,10 @@ class NovaCopilotApp:
         self.pending_context: dict[str, dict[str, str]] = {}
         self._writing_message_ids: set[str] = set()
         self._update_check_running = False
+        self._account_auth_pending = False
+        self._account_window: tk.Toplevel | None = None
+        self._account_status_label: tk.Label | None = None
+        self._account_submit_button: tk.Button | None = None
 
         self._configure_styles()
         self._build_ui()
@@ -253,6 +293,204 @@ class NovaCopilotApp:
             self.threads = [new_thread()]
         self.active_thread_id = self.threads[0]["id"]
         return self.threads[0]
+
+    def _load_auth_session(self) -> dict[str, Any] | None:
+        path = _auth_session_path()
+        try:
+            data = json.loads(_dpapi(path.read_bytes(), protect=False).decode("utf-8"))
+            if all(data.get(key) for key in ("access_token", "refresh_token", "email")):
+                return data
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+        return None
+
+    def _save_auth_session(self, session: dict[str, Any]) -> None:
+        path = _auth_session_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        protected = _dpapi(json.dumps(session, separators=(",", ":")).encode("utf-8"), protect=True)
+        path.write_bytes(protected)
+
+    def _clear_auth_session(self) -> None:
+        self.auth_session = None
+        try:
+            _auth_session_path().unlink(missing_ok=True)
+        except OSError:
+            pass
+        self.root.after(0, self._refresh_account_button)
+
+    @staticmethod
+    def _supabase_auth_request(path: str, payload: dict[str, str]) -> dict[str, Any]:
+        request = urllib.request.Request(
+            SUPABASE_URL + path,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"apikey": SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=25) as response:
+                return json.loads(response.read(256 * 1024).decode("utf-8", "replace"))
+        except urllib.error.HTTPError as exc:
+            try:
+                details = json.loads(exc.read(32 * 1024).decode("utf-8", "replace"))
+                message = details.get("message") or details.get("msg") or details.get("error_description") or details.get("error")
+            except Exception:
+                message = None
+            raise RuntimeError(str(message or f"Account request failed (HTTP {exc.code}).")) from None
+
+    def _get_access_token(self) -> str:
+        session = self.auth_session
+        if not session:
+            raise RuntimeError("Sign in with a verified NOVA Copilot account before sending a message.")
+        if float(session.get("expires_at", 0)) > time.time() + 60:
+            return str(session["access_token"])
+        try:
+            refreshed = self._supabase_auth_request("/auth/v1/token?grant_type=refresh_token", {"refresh_token": session["refresh_token"]})
+            if not refreshed.get("access_token") or not refreshed.get("refresh_token"):
+                raise RuntimeError("Session refresh did not return an access token.")
+            updated = {
+                "access_token": refreshed["access_token"],
+                "refresh_token": refreshed["refresh_token"],
+                "expires_at": refreshed.get("expires_at") or time.time() + int(refreshed.get("expires_in", 3600)),
+                "email": (refreshed.get("user") or {}).get("email") or session["email"],
+            }
+            self._save_auth_session(updated)
+            self.events.put(("auth-session", updated))
+            return str(updated["access_token"])
+        except Exception:
+            self._clear_auth_session()
+            self.events.put(("auth-expired", None))
+            raise RuntimeError("Your NOVA session expired. Sign in again from Account.") from None
+
+    def _refresh_account_button(self) -> None:
+        if not hasattr(self, "account_button"):
+            return
+        self.account_button.configure(text="Account" if self.auth_session else "Sign in")
+
+    def open_account(self) -> None:
+        if self._account_window and self._account_window.winfo_exists():
+            self._account_window.lift()
+            return
+
+        window = tk.Toplevel(self.root)
+        self._account_window = window
+        window.title("NOVA Account")
+        window.transient(self.root)
+        window.resizable(False, False)
+        window.configure(bg=WHITE)
+        window.protocol("WM_DELETE_WINDOW", lambda: self._close_account_window(window))
+        body = tk.Frame(window, bg=WHITE, padx=18, pady=16)
+        body.pack(fill="both", expand=True)
+        tk.Label(body, text="NOVA Account", bg=WHITE, fg=INK, font=("Segoe UI Semibold", 14), anchor="w").pack(fill="x")
+        tk.Label(body, text="Sign in to use NOVA Copilot", bg=WHITE, fg=MUTED, font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=(2, 12))
+
+        session = self.auth_session
+        if session:
+            email = str(session.get("email", ""))
+            plan = "Verified account · usage limits enforced by NOVA"
+            tk.Label(body, text=email, bg=WHITE, fg=INK, font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x", pady=(0, 6))
+            tk.Label(body, text=plan, bg=WHITE, fg=ACCENT, font=("Segoe UI", 9, "bold"), anchor="w").pack(fill="x")
+            note = "Your daily allowance resets at 00:00 UTC."
+            tk.Label(body, text=note, bg=WHITE, fg=MUTED, font=("Segoe UI", 8), anchor="w", wraplength=320, justify="left").pack(fill="x", pady=(6, 14))
+            tk.Button(body, text="Sign out", command=lambda: self._sign_out(window), padx=12, pady=5).pack(anchor="e")
+        else:
+            email_var = tk.StringVar()
+            password_var = tk.StringVar()
+            create_var = tk.BooleanVar(value=False)
+            tk.Label(body, text="Email address", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), anchor="w").pack(fill="x")
+            email_entry = tk.Entry(body, textvariable=email_var, font=("Segoe UI", 10), relief="solid", bd=1)
+            email_entry.pack(fill="x", pady=(3, 8))
+            tk.Label(body, text="Password", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), anchor="w").pack(fill="x")
+            password_entry = tk.Entry(body, textvariable=password_var, show="•", font=("Segoe UI", 10), relief="solid", bd=1)
+            password_entry.pack(fill="x", pady=(3, 5))
+            tk.Checkbutton(body, text="Create a new account", variable=create_var, bg=WHITE, fg=INK, activebackground=WHITE, selectcolor=WHITE, font=("Segoe UI", 9)).pack(anchor="w")
+            tk.Label(body, text="Verify your email before signing in. Email confirmation is required for chat access.", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), wraplength=320, justify="left", anchor="w").pack(fill="x", pady=(2, 8))
+            status = tk.Label(body, text="", bg=WHITE, fg=ACCENT, font=("Segoe UI", 8), wraplength=320, justify="left", anchor="w")
+            status.pack(fill="x", pady=(0, 6))
+            self._account_status_label = status
+            submit_button = tk.Button(body, text="Sign in", bg=ACCENT, fg=WHITE, relief="flat", padx=12, pady=5)
+            submit_button.pack(anchor="e")
+            self._account_submit_button = submit_button
+
+            def update_mode(*_args: Any) -> None:
+                submit_button.configure(text="Create account" if create_var.get() else "Sign in")
+
+            create_var.trace_add("write", update_mode)
+
+            def submit() -> None:
+                email = email_var.get().strip().lower()
+                password = password_var.get()
+                creating = create_var.get()
+                if not email or len(password) < 8:
+                    status.configure(text="Enter your email and a password of at least 8 characters.", fg=ORANGE)
+                    return
+                if self._account_auth_pending:
+                    return
+                self._account_auth_pending = True
+                submit_button.configure(text="Working…", state="disabled")
+                status.configure(text="Contacting the sign-in service…", fg=MUTED)
+                threading.Thread(target=self._account_auth_worker, args=(email, password, creating), daemon=True).start()
+
+            submit_button.configure(command=submit)
+            password_entry.bind("<Return>", lambda _event: submit())
+            email_entry.focus_set()
+        window.update_idletasks()
+        window.geometry(f"360x{window.winfo_reqheight()}")
+        window.grab_set()
+
+    def _account_auth_worker(self, email: str, password: str, creating: bool) -> None:
+        try:
+            if creating:
+                result = self._supabase_auth_request("/auth/v1/signup", {"email": email, "password": password})
+                user = result.get("user") or {}
+                if not result.get("access_token") or not (user.get("email_confirmed_at") or user.get("confirmed_at")):
+                    self.events.put(("account-auth", (None, "Check your email to verify your account, then come back here to sign in.", None)))
+                    return
+            else:
+                result = self._supabase_auth_request("/auth/v1/token?grant_type=password", {"email": email, "password": password})
+            if not result.get("access_token") or not result.get("refresh_token"):
+                raise RuntimeError("Sign-in did not return a session. Verify your email and try again.")
+            user = result.get("user") or {}
+            if not (user.get("email_confirmed_at") or user.get("confirmed_at")):
+                raise RuntimeError("Verify your email before signing in to NOVA Copilot.")
+            session = {
+                "access_token": result["access_token"],
+                "refresh_token": result["refresh_token"],
+                "expires_at": result.get("expires_at") or time.time() + int(result.get("expires_in", 3600)),
+                "email": user.get("email") or email,
+            }
+            self.events.put(("account-auth", (session, "", None)))
+        except Exception as exc:
+            self.events.put(("account-auth", (None, "", str(exc))))
+
+    def _close_account_window(self, window: tk.Toplevel) -> None:
+        try:
+            window.grab_release()
+            window.destroy()
+        except tk.TclError:
+            pass
+        if self._account_window is window:
+            self._account_window = None
+            self._account_status_label = None
+            self._account_submit_button = None
+
+    def _sign_out(self, window: tk.Toplevel) -> None:
+        session = self.auth_session
+        if session:
+            threading.Thread(target=self._revoke_session_worker, args=(session,), daemon=True).start()
+        self._clear_auth_session()
+        self._close_account_window(window)
+
+    @staticmethod
+    def _revoke_session_worker(session: dict[str, Any]) -> None:
+        request = urllib.request.Request(
+            SUPABASE_URL + "/auth/v1/logout",
+            headers={"apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": f"Bearer {session['access_token']}"},
+            method="POST",
+        )
+        try:
+            urllib.request.urlopen(request, timeout=10).close()
+        except Exception:
+            pass
 
     def _configure_styles(self) -> None:
         style = ttk.Style(self.root)
@@ -295,6 +533,9 @@ class NovaCopilotApp:
 
         self.update_button = tk.Button(header, text="Update", relief="flat", bd=0, bg=WHITE, fg=ACCENT, activebackground=ACCENT_LIGHT, command=self.check_for_updates, cursor="hand2", font=("Segoe UI", 8, "bold"))
         self.update_button.pack(side="right", padx=(4, 0))
+        self.account_button = tk.Button(header, text="Account", relief="flat", bd=0, bg=WHITE, fg=ACCENT, activebackground=ACCENT_LIGHT, command=self.open_account, cursor="hand2", font=("Segoe UI", 8, "bold"))
+        self.account_button.pack(side="right", padx=(4, 0))
+        self._refresh_account_button()
         self.pin_button = tk.Button(header, text="📌", relief="flat", bd=0, bg=WHITE, fg=ACCENT, activebackground=ACCENT_LIGHT, command=self.toggle_pin, cursor="hand2")
         self.pin_button.pack(side="right", padx=(4, 0))
         self.more_button = tk.Menubutton(header, text="⋯", relief="flat", bd=0, bg=WHITE, fg=MUTED, activebackground=BG, font=("Segoe UI", 17), cursor="hand2")
@@ -368,6 +609,7 @@ class NovaCopilotApp:
     def _build_more_menu(self) -> None:
         self.more_menu = tk.Menu(self.root, tearoff=0, font=("Segoe UI", 9))
         self.more_menu.add_command(label="New chat", command=self.new_chat)
+        self.more_menu.add_command(label="Account / Sign in…", command=self.open_account)
         self.more_menu.add_separator()
         self.pin_menu_var = tk.BooleanVar(value=self.pinned)
         self.login_menu_var = tk.BooleanVar(value=self.launch_at_login)
@@ -741,6 +983,9 @@ class NovaCopilotApp:
         if self.is_sending:
             self.stop_response()
             return
+        if not self.auth_session:
+            self.open_account()
+            return
         prompt = self.input_text.get("1.0", "end-1c").strip()
         if not prompt:
             return
@@ -759,6 +1004,9 @@ class NovaCopilotApp:
         document_context: dict[str, str] | None = None,
         existing_user_message: dict[str, Any] | None = None,
     ) -> None:
+        if not self.auth_session:
+            self.open_account()
+            return
         thread = next((item for item in self.threads if item["id"] == thread_id), None)
         if thread is None:
             return
@@ -901,14 +1149,21 @@ class NovaCopilotApp:
         editor.grab_set()
 
     def _stream_reply(self, thread_id: str, message_id: str, messages: list[dict[str, str]], request_control: ActiveRequest) -> None:
-        request = urllib.request.Request(
-            CHAT_URL,
-            data=json.dumps({"messages": messages}, ensure_ascii=False).encode("utf-8"),
-            headers={"Content-Type": "application/json", "Accept": "text/plain, */*", "User-Agent": f"NOVA-Copilot-Windows/{APP_VERSION}"},
-            method="POST",
-        )
+        request = None
         response = None
         try:
+            access_token = self._get_access_token()
+            request = urllib.request.Request(
+                CHAT_URL,
+                data=json.dumps({"messages": messages}, ensure_ascii=False).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "text/plain, */*",
+                    "User-Agent": f"NOVA-Copilot-Windows/{APP_VERSION}",
+                    "Authorization": f"Bearer {access_token}",
+                },
+                method="POST",
+            )
             response = urllib.request.urlopen(request, timeout=180)
             if not request_control.attach_response(response):
                 self.events.put(("finished", (thread_id, message_id, None, True)))
@@ -931,6 +1186,10 @@ class NovaCopilotApp:
             else:
                 try:
                     detail = exc.read(8192).decode("utf-8", "replace").strip()
+                    try:
+                        detail = json.loads(detail).get("error") or detail
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
                 except Exception:
                     detail = ""
                 self.events.put(("finished", (thread_id, message_id, f"Nova V8 request failed (HTTP {exc.code}): {detail[:450]}", False)))
@@ -979,7 +1238,33 @@ class NovaCopilotApp:
         try:
             while True:
                 kind, payload = self.events.get_nowait()
-                if kind == "health":
+                if kind == "account-auth":
+                    session, message, error = payload
+                    self._account_auth_pending = False
+                    if session:
+                        try:
+                            self._save_auth_session(session)
+                            self.auth_session = session
+                            self._refresh_account_button()
+                            if self._account_window:
+                                self._close_account_window(self._account_window)
+                            self.status_label.configure(text="Signed in to NOVA")
+                            self.status_dot.configure(fg=GREEN)
+                        except Exception as exc:
+                            error = f"Could not securely save this session: {exc}"
+                    elif self._account_status_label and self._account_status_label.winfo_exists():
+                        self._account_status_label.configure(text=error or message, fg=ORANGE if error else ACCENT)
+                        if self._account_submit_button and self._account_submit_button.winfo_exists():
+                            self._account_submit_button.configure(text="Create account" if "verify your account" in message else "Sign in", state="normal")
+                elif kind == "auth-session":
+                    self.auth_session = payload
+                    self._refresh_account_button()
+                elif kind == "auth-expired":
+                    self.auth_session = None
+                    self._refresh_account_button()
+                    self.status_label.configure(text="Sign in again to continue")
+                    self.status_dot.configure(fg=ORANGE)
+                elif kind == "health":
                     self.connected, self.connection_status = payload
                     if not self.is_sending and not self._update_check_running:
                         self.status_label.configure(text=self.connection_status)
@@ -1340,4 +1625,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

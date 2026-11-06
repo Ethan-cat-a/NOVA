@@ -4,7 +4,7 @@ import Foundation
 final class NovaAPIClient {
     static let shared = NovaAPIClient()
 
-    private let chatURL = URL(string: "https://nova-v8.vercel.app/api/chat")!
+    private let chatURL = URL(string: "https://nova-copilot-gateway.vercel.app/api/chat")!
 
     private init() {}
 
@@ -23,13 +23,15 @@ final class NovaAPIClient {
         return try JSONDecoder().decode(NovaHealthResponse.self, from: data)
     }
 
-    /// Streams the raw text response returned by Nova V8's `/api/chat` endpoint.
-    /// No API credential is embedded in this application; V8 keeps the credential server-side.
+    /// Streams the raw text response through the authenticated NOVA gateway.
+    /// The model credential remains on the server.
     func stream(messages: [NovaAPIMessage], onText: @escaping @MainActor (String) -> Void) async throws {
+        let accessToken = try await NovaAccountStore.shared.accessTokenForRequest()
         var request = URLRequest(url: chatURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/plain, */*", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 180
         request.httpBody = try JSONEncoder().encode(NovaChatRequest(messages: messages))
 
@@ -43,7 +45,8 @@ final class NovaAPIClient {
                 errorData.append(byte)
                 if errorData.count >= 8192 { break }
             }
-            let detail = String(data: errorData, encoding: .utf8) ?? "The Nova V8 backend returned an error."
+            let rawDetail = String(data: errorData, encoding: .utf8) ?? "The NOVA backend returned an error."
+            let detail = (try? JSONDecoder().decode(GatewayErrorResponse.self, from: errorData).error) ?? rawDetail
             throw NovaAPIError.httpStatus(http.statusCode, detail)
         }
 
@@ -89,6 +92,10 @@ final class NovaAPIClient {
 
 private struct NovaChatRequest: Encodable {
     let messages: [NovaAPIMessage]
+}
+
+private struct GatewayErrorResponse: Decodable {
+    let error: String?
 }
 
 enum NovaAPIError: LocalizedError {

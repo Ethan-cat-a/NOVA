@@ -13,6 +13,7 @@ final class NovaChatModel: ObservableObject {
     @Published private(set) var connectionStatus = "Connecting to Nova…"
     @Published private(set) var isConnected = false
     @Published private(set) var lastError: String?
+    @Published var showsAccountSheet = false
 
     private let storageKey = "com.novatech.NOVACompanion.threads.v1"
     private var requestTask: Task<Void, Never>?
@@ -191,6 +192,7 @@ final class NovaChatModel: ObservableObject {
         if isSending { stop(); return }
         let question = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty || !contextAttachments.isEmpty else { return }
+        guard requireAccount() else { return }
 
         let prompt: String
         let displayContent: String?
@@ -250,7 +252,7 @@ final class NovaChatModel: ObservableObject {
     }
 
     func retryLastRequest() {
-        guard canRetryLastRequest, let failedRequest,
+        guard requireAccount(), canRetryLastRequest, let failedRequest,
               let thread = threads.first(where: { $0.id == failedRequest.threadID }),
               thread.messages.contains(where: { $0.id == failedRequest.userMessageID }) else { return }
 
@@ -270,7 +272,7 @@ final class NovaChatModel: ObservableObject {
     }
 
     func retryResponse(_ responseMessageID: UUID) {
-        guard canRetryResponse(responseMessageID),
+        guard requireAccount(), canRetryResponse(responseMessageID),
               let request = retryableRequests[responseMessageID] else { return }
 
         let preservedDraft = input
@@ -388,6 +390,15 @@ final class NovaChatModel: ObservableObject {
             self.requestTask = nil
             if self.isConnected && self.lastError == nil { self.connectionStatus = "Nova V8 connected" }
         }
+    }
+
+    private func requireAccount() -> Bool {
+        guard NovaAccountStore.shared.hasSession else {
+            showsAccountSheet = true
+            connectionStatus = "Sign in to use NOVA"
+            return false
+        }
+        return true
     }
 
     func stop() {

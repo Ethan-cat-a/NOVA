@@ -1,3 +1,12 @@
+# NOVA Copilot Version 1.5.0 (2026-11-06)
+
+- Adds email/password account creation and sign-in. Chat requires a verified email address.
+- Stores Mac sessions in Keychain and Windows sessions with Windows DPAPI encryption.
+- Enforces chat limits server-side: 25 messages per UTC day and 10 per minute for regular accounts; the designated verified owner account has unlimited daily use and a 30-per-minute burst cap.
+- Adds a separate streaming gateway that checks the Supabase account and quota, then forwards the existing NOVA V8 response unchanged.
+- Email confirmation and Supabase Auth rate protections reduce sign-up abuse. Cloudflare Turnstile is not configured; it needs site and secret keys. General sign-ups also need a custom SMTP sender before launch because Supabase’s built-in sender is restricted.
+- The production gateway is deployed. Existing older app versions continue using the legacy endpoint until the authenticated clients are distributed.
+
 # NOVA Copilot Version 1.4.8 (2026-11-06)
 
 - Keeps new replies in view while you’re at the bottom and adds a **Latest** button after you scroll up.

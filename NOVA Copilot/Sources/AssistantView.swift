@@ -21,7 +21,9 @@ struct AssistantView: View {
     @State private var renameRequest: ChatThread?
     @State private var renameTitle = ""
     @State private var deleteRequest: ChatThread?
+    @State private var showsAccountSheet = false
     @StateObject private var viewState = AssistantViewState()
+    @StateObject private var accountStore = NovaAccountStore.shared
 
     private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
     private let ink = Color.primary
@@ -83,6 +85,12 @@ struct AssistantView: View {
         }
         .onChange(of: model.lastError) { value in
             if let value, !model.isSending { showNotice("NOVA Copilot", message: value) }
+        }
+        .onChange(of: model.showsAccountSheet) { value in
+            if value {
+                showsAccountSheet = true
+                model.showsAccountSheet = false
+            }
         }
         .onChange(of: model.currentThread.messages.count) { count in
             if count > 0 { viewState.dismissFirstRunTip() }
@@ -269,6 +277,17 @@ struct AssistantView: View {
                 Text("\(deleteRequest?.title ?? "This chat") and its messages will be removed from this Mac.")
             }
 
+            Button { showsAccountSheet = true } label: {
+                Image(systemName: accountStore.hasSession ? "person.crop.circle.badge.checkmark" : "person.crop.circle")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(accountStore.hasSession ? accent : muted)
+                    .frame(width: 29, height: 29)
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accountStore.hasSession ? "NOVA account" : "Sign in to NOVA")
+            .help(accountStore.email ?? "Sign in or create a NOVA account")
+
             Menu {
                 Button { model.newChat() } label: { Label("New chat", systemImage: "plus.message") }
                 Divider()
@@ -317,6 +336,9 @@ struct AssistantView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color(nsColor: .windowBackgroundColor).opacity(0.97))
+        .sheet(isPresented: $showsAccountSheet) {
+            NovaAccountView(store: accountStore)
+        }
     }
 
     private var modeBar: some View {
