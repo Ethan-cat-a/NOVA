@@ -8,14 +8,14 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <language>en</language>
     <item>
       <title>Version 1.5.1</title>
-      <pubDate>Fri, 06 Nov 2026 10:57:54 GMT</pubDate>
+      <pubDate>Fri, 06 Nov 2026 12:11:41 GMT</pubDate>
       <sparkle:version>19</sparkle:version>
       <sparkle:shortVersionString>1.5.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.1/NOVA-Copilot-1.5.1.zip" length="4987497" type="application/octet-stream" sparkle:edSignature="9fIinNUEQ8ZNcieZpnPtJkf8yEwXA82XA7NdCpyg56AvLxoBO6M0M2LbSdia79hSrMFoR3ebbCnxzyykmwLdBg=="></enclosure>
+      <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.1/NOVA-Copilot-1.5.1.zip" length="5015172" type="application/octet-stream" sparkle:edSignature="8Hza5iAoC/jEaRYbSpfLv42y/Ofop7tP7/NsvGrpVin+dBWFLlI3DEQoEJovQqkt0OiW230jBhhjlXeWVqQyDg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: wHHnDXMynPt6LzWPy8bAc5ZF2d7TvOeuSxHIQrSOsIZYohX3dlcrOmYU540ewqxpaQBSnjNvuL0tyAl9IxwFDg==
+edSignature: Gc66rviHvX3vkamlcCIdOacbyErgdEROqFRn9WHZFKsfWWRFXhFnyRk2IQOtUHBg4Lde+7/kMZah/wGEXUbPAw==
 length: 1162
 -->
