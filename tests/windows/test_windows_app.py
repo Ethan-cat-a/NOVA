@@ -120,6 +120,7 @@ class WindowsAppTests(unittest.TestCase):
         app = SimpleNamespace(
             events=queue.Queue(),
             auth_session={"access_token": "test-access-token", "expires_at": time.time() + 3600},
+            _get_access_token=lambda: "test-access-token",
         )
         with patch.object(nova.urllib.request, "urlopen", return_value=response):
             nova.NovaCopilotApp._stream_reply(
