@@ -4,7 +4,7 @@
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
   <p>
-    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.4.8/NOVA-Copilot-1.4.8.dmg"><strong>Download latest macOS app · 1.4.8 DMG</strong></a>
+    <a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.8.dmg"><strong>Download latest macOS app · 1.4.8 DMG</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.4.2/NOVA-Copilot-Windows-1.4.2.zip"><strong>Download Windows release · 1.4.2</strong></a>
     &nbsp; · &nbsp;
@@ -41,7 +41,7 @@
         <li>Answer actions appear on hover, with Copy, Try again and Word export</li>
         <li>Matches the Mac’s light or dark appearance</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.4.8/NOVA-Copilot-1.4.8.dmg"><strong>↓ Download Mac app · 1.4.8 DMG</strong></a> · <a href="https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.4.8">Release notes</a></p>
+      <p><a href="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA-Copilot-1.4.8.dmg"><strong>↓ Download Mac app · 1.4.8 DMG</strong></a> · <a href="https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.4.8">Release notes</a></p>
       <p><sub>Users on 1.2.0, 1.3.0, or 1.3.1 must install 1.3.2 manually once; users on 1.3.2 can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
