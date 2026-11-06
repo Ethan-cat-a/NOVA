@@ -12,6 +12,9 @@ struct AssistantView: View {
     @ObservedObject var updateStatus: UpdaterStatus
 
     @FocusState private var inputFocused: Bool
+    @State private var isConversationAtBottom = true
+    @State private var conversationViewportBottomY: CGFloat = .infinity
+    @State private var conversationContentBottomY: CGFloat = .infinity
     @State private var showsUpdateNotes = false
     @State private var showsChatHistory = false
     @State private var historySearchText = ""
@@ -146,7 +149,7 @@ struct AssistantView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image("NOVAIcon")
                 .resizable()
                 .scaledToFill()
@@ -155,12 +158,25 @@ struct AssistantView: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text("NOVA COPILOT").font(.system(size: 13, weight: .bold, design: .rounded)).tracking(0.3).foregroundStyle(ink)
-                    Text("V8 CORE").font(.system(size: 8, weight: .bold)).tracking(0.8).foregroundStyle(accent)
-                        .padding(.horizontal, 5).padding(.vertical, 3)
+                HStack(spacing: 5) {
+                    Text("NOVA")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .tracking(0.3)
+                        .foregroundStyle(ink)
+                    Text("V8 CORE")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .tracking(0.6)
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
                         .background(accent.opacity(0.08), in: Capsule())
                 }
+                Text("COPILOT")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .tracking(0.3)
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Button {
                     guard !model.isConnected, !model.isSending, !model.isCheckingConnection else { return }
                     Task { await model.checkConnection() }
@@ -186,16 +202,11 @@ struct AssistantView: View {
             .help(panelState.isPinned ? "Unpin from top" : "Keep on top")
 
             Button(action: onCheckForUpdates) {
-                HStack(spacing: 5) {
-                    Image(systemName: updateStatus.isChecking ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(updateStatus.isChecking ? "Checking…" : "Update")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .foregroundStyle(muted)
-                .padding(.horizontal, 8)
-                .frame(height: 29)
-                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                Image(systemName: updateStatus.isChecking ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(muted)
+                    .frame(width: 29, height: 29)
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
             .disabled(updateStatus.isChecking)
@@ -344,47 +355,114 @@ struct AssistantView: View {
 
     private var conversation: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 15) {
-                    if model.currentThread.messages.isEmpty {
-                        welcome
-                    } else {
-                        ForEach(model.currentThread.messages) { message in
-                            MessageBubble(
-                                message: message,
-                                accent: accent,
-                                isStreaming: model.streamingMessageID == message.id,
-                                canRetry: model.canRetryResponse(message.id),
-                                onCopy: { copyResponse(message.content) },
-                                onCopyCode: { copyCodeBlock($0) },
-                                onRetry: { model.retryResponse(message.id) },
-                                onSaveWord: { viewState.wordDraftReview = WordDraftReview(text: message.content) }
-                            )
-                                .id(message.id)
+            ZStack(alignment: .bottomTrailing) {
+                ScrollView {
+                    LazyVStack(spacing: 15) {
+                        if model.currentThread.messages.isEmpty {
+                            welcome
+                        } else {
+                            ForEach(model.currentThread.messages) { message in
+                                MessageBubble(
+                                    message: message,
+                                    accent: accent,
+                                    isStreaming: model.streamingMessageID == message.id,
+                                    canRetry: model.canRetryResponse(message.id),
+                                    onCopy: { copyResponse(message.content) },
+                                    onCopyCode: { copyCodeBlock($0) },
+                                    onRetry: { model.retryResponse(message.id) },
+                                    onSaveWord: { viewState.wordDraftReview = WordDraftReview(text: message.content) }
+                                )
+                                    .id(message.id)
+                            }
                         }
+                        Color.clear
+                            .frame(height: 1)
+                            .id("conversation-bottom")
+                            .background {
+                                GeometryReader { geometry in
+                                    Color.clear.preference(
+                                        key: ConversationContentBottomPreferenceKey.self,
+                                        value: geometry.frame(in: .global).maxY
+                                    )
+                                }
+                            }
                     }
-                    Color.clear.frame(height: 1).id("conversation-bottom")
+                    .padding(.horizontal, 15)
+                    .padding(.top, 17)
+                    .padding(.bottom, 15)
                 }
-                .padding(.horizontal, 15)
-                .padding(.top, 17)
-                .padding(.bottom, 15)
+                .scrollIndicators(.visible)
+                .background {
+                    GeometryReader { geometry in
+                        Color.clear.preference(
+                            key: ConversationViewportBottomPreferenceKey.self,
+                            value: geometry.frame(in: .global).maxY
+                        )
+                    }
+                }
+                .onPreferenceChange(ConversationViewportBottomPreferenceKey.self) { value in
+                    conversationViewportBottomY = value
+                    updateConversationScrollPosition()
+                }
+                .onPreferenceChange(ConversationContentBottomPreferenceKey.self) { value in
+                    conversationContentBottomY = value
+                    updateConversationScrollPosition()
+                }
+                .onChange(of: model.currentThread.messages.count) { _ in
+                    guard isConversationAtBottom else { return }
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                    }
+                }
+                .onChange(of: model.currentThread.messages.last?.content) { content in
+                    guard content != nil,
+                          isConversationAtBottom,
+                          model.streamingMessageID == model.currentThread.messages.last?.id else { return }
+                    proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                }
+                .onChange(of: model.activeThreadID) { _ in
+                    isConversationAtBottom = true
+                    proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                }
+                .onAppear {
+                    isConversationAtBottom = true
+                    proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                }
+
+                if !isConversationAtBottom {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                        }
+                    } label: {
+                        Label("Latest", systemImage: "arrow.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 8)
+                            .background(Color(nsColor: .windowBackgroundColor), in: Capsule())
+                            .overlay(Capsule().stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+                            .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Jump to latest message")
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
-            .scrollIndicators(.visible)
-            .onChange(of: model.currentThread.messages.count) { _ in
-                withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
-            }
-            .onChange(of: model.currentThread.messages.last?.content) { content in
-                guard content != nil,
-                      model.streamingMessageID == model.currentThread.messages.last?.id else { return }
-                proxy.scrollTo("conversation-bottom", anchor: .bottom)
-            }
-            .onChange(of: model.activeThreadID) { _ in
-                proxy.scrollTo("conversation-bottom", anchor: .bottom)
-            }
-            .onAppear { proxy.scrollTo("conversation-bottom", anchor: .bottom) }
         }
             // Keep the conversation canvas consistent with the rest of the panel.
             .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private func updateConversationScrollPosition() {
+        guard conversationViewportBottomY.isFinite,
+              conversationContentBottomY.isFinite else { return }
+        let isAtBottom = conversationContentBottomY <= conversationViewportBottomY + 64
+        guard isConversationAtBottom != isAtBottom else { return }
+        withAnimation(.easeOut(duration: 0.15)) {
+            isConversationAtBottom = isAtBottom
+        }
     }
 
     private var welcome: some View {
@@ -670,13 +748,13 @@ struct AssistantView: View {
     private func copyResponse(_ content: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(content, forType: .string)
-        showFeedback("Copied NOVA’s response.")
+        showFeedback("Copied.", duration: 1.5)
     }
 
     private func copyCodeBlock(_ content: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(content, forType: .string)
-        showFeedback("Copied code block.")
+        showFeedback("Copied code.", duration: 1.5)
     }
 
     private func contextAttachmentChip(_ attachment: ContextAttachment) -> some View {
@@ -712,12 +790,12 @@ struct AssistantView: View {
         .help("\(attachment.kind.label) · \(attachment.extractedText.count.formatted()) characters extracted. Review or remove this file.")
     }
 
-    private func showFeedback(_ message: String, isError: Bool = false) {
+    private func showFeedback(_ message: String, isError: Bool = false, duration: TimeInterval = 4) {
         withAnimation(.easeOut(duration: 0.18)) {
             viewState.feedbackMessage = message
             viewState.feedbackIsError = isError
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
             guard viewState.feedbackMessage == message else { return }
             withAnimation(.easeIn(duration: 0.18)) { viewState.feedbackMessage = nil }
         }
@@ -1441,6 +1519,22 @@ private struct ClipboardActionPopover: View {
             return "Showing first \(included) of \(review.snapshot.originalCharacterCount.formatted()) characters"
         }
         return "\(included) characters"
+    }
+}
+
+private struct ConversationViewportBottomPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = .infinity
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct ConversationContentBottomPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = .infinity
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

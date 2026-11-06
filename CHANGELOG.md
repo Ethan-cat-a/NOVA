@@ -1,3 +1,10 @@
+# NOVA Copilot Version 1.4.8 (2026-11-06)
+
+- Keeps new replies in view while you’re at the bottom and adds a **Latest** button after you scroll up.
+- Preserves the next message draft when retrying a failed or regenerated response.
+- Shows a brief **Copied** confirmation after copying an answer or code block.
+- Keeps the NOVA Copilot name on two lines in the compact panel header.
+
 # NOVA Copilot Version 1.4.7 (2026-11-06)
 
 - Lightens the conversation canvas so it matches the normal panel background around messages.

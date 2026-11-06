@@ -254,8 +254,8 @@ final class NovaChatModel: ObservableObject {
               let thread = threads.first(where: { $0.id == failedRequest.threadID }),
               thread.messages.contains(where: { $0.id == failedRequest.userMessageID }) else { return }
 
+        let preservedDraft = input
         activeThreadID = failedRequest.threadID
-        input = failedRequest.prompt
         lastError = nil
         startRequest(
             prompt: failedRequest.prompt,
@@ -264,7 +264,8 @@ final class NovaChatModel: ObservableObject {
             displayContent: nil,
             responseMode: failedRequest.mode,
             isolateWordSource: failedRequest.isolateWordSource,
-            existingResponseMessageID: failedRequest.responseMessageID
+            existingResponseMessageID: failedRequest.responseMessageID,
+            preservedDraft: preservedDraft
         )
     }
 
@@ -272,7 +273,7 @@ final class NovaChatModel: ObservableObject {
         guard canRetryResponse(responseMessageID),
               let request = retryableRequests[responseMessageID] else { return }
 
-        input = request.prompt
+        let preservedDraft = input
         lastError = nil
         startRequest(
             prompt: request.prompt,
@@ -281,7 +282,8 @@ final class NovaChatModel: ObservableObject {
             displayContent: nil,
             responseMode: request.mode,
             isolateWordSource: request.isolateWordSource,
-            existingResponseMessageID: request.responseMessageID
+            existingResponseMessageID: request.responseMessageID,
+            preservedDraft: preservedDraft
         )
     }
 
@@ -292,9 +294,10 @@ final class NovaChatModel: ObservableObject {
         displayContent: String? = nil,
         responseMode: NovaMode? = nil,
         isolateWordSource: Bool = false,
-        existingResponseMessageID: UUID? = nil
+        existingResponseMessageID: UUID? = nil,
+        preservedDraft: String? = nil
     ) {
-        input = ""
+        input = preservedDraft ?? ""
         lastError = nil
         failedRequest = nil
         let threadBeforeSend = threads.first(where: { $0.id == threadID }) ?? currentThread
