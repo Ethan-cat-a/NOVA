@@ -5,7 +5,7 @@
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
   <p><strong>Source version 1.5.1</strong> removes in-app account creation and signs in to existing accounts with Google or existing credentials.</p>
   <p>
-    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg"><strong>Download latest macOS app · 1.5.0 DMG</strong></a>
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.1/NOVA-Copilot-1.5.1.dmg"><strong>Download latest macOS app · 1.5.1 DMG</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.0/NOVA-Copilot-Windows-1.5.0.exe"><strong>Download Windows app · 1.5.0</strong></a>
     &nbsp; · &nbsp;
@@ -43,7 +43,7 @@
         <li>Answer actions appear on hover, with Copy, Try again and Word export</li>
         <li>Matches the Mac’s light or dark appearance</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg"><strong>↓ Download Mac app · 1.5.0 DMG</strong></a> · <a href="https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.0">Release notes</a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg"><strong>↓ Download Mac app · 1.5.1 DMG</strong></a> · <a href="https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.1">Release notes</a></p>
       <p><sub>Users on 1.2.0, 1.3.0, or 1.3.1 must install 1.3.2 manually once; users on 1.3.2 can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
@@ -65,7 +65,7 @@
   </tr>
 </table>
 
-> The source is at 1.5.1. Download links above still point to the latest published 1.5.0 installers.
+> The macOS app and source are at 1.5.1; the Windows installer remains at 1.5.0.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
@@ -141,6 +141,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for macOS — 1.5.1](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.1)
 - [NOVA Copilot for macOS — 1.5.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.0)
 - [NOVA Copilot for Windows — 1.5.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.5.0)
 - [NOVA Copilot for macOS — 1.4.7](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.4.7)
