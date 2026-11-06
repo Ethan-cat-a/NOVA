@@ -4,7 +4,6 @@ import SwiftUI
 private final class NovaAccountForm: ObservableObject {
     @Published var email: String
     @Published var password = ""
-    @Published var isCreatingAccount = false
     @Published var errorMessage: String?
 
     init(email: String) {
@@ -59,21 +58,31 @@ struct NovaAccountView: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: 10) {
+                    Button {
+                        form.errorMessage = nil
+                        do {
+                            try store.beginGoogleSignIn()
+                        } catch {
+                            form.errorMessage = error.localizedDescription
+                        }
+                    } label: {
+                        Label("Continue with Google", systemImage: "globe")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(store.isWorking || store.isGoogleSignInInProgress)
+
+                    Text("Sign in with the Google account linked to your existing NOVA account.")
+                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                    Divider()
+
                     TextField("Email address", text: $form.email)
                         .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled()
                     SecureField("Password", text: $form.password)
                         .textFieldStyle(.roundedBorder)
 
-                    Toggle("Create a new account", isOn: $form.isCreatingAccount)
-                        .font(.system(size: 11, weight: .medium))
-                        .toggleStyle(.switch)
-
-                    if form.isCreatingAccount {
-                        Text("We’ll email you a verification link. Come back here to sign in after confirming it.")
-                            .font(.system(size: 10)).foregroundStyle(.secondary)
-                    }
-                    Text("Email verification is required before chat access is enabled.")
+                    Text("Email and password are for signing in to an existing account.")
                         .font(.system(size: 10)).foregroundStyle(.secondary)
                 }
 
@@ -90,29 +99,27 @@ struct NovaAccountView: View {
                 HStack {
                     Spacer()
                     Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                    Button(form.isCreatingAccount ? "Create account" : "Sign in") {
+                    Button("Sign in") {
                         Task { await submit() }
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(store.isWorking || form.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || form.password.count < 8)
+                    .disabled(store.isWorking || store.isGoogleSignInInProgress || form.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || form.password.isEmpty)
                 }
             }
         }
         .padding(20)
         .frame(width: 340)
+        .onChange(of: store.hasSession) { signedIn in
+            if signedIn { dismiss() }
+        }
     }
 
     @MainActor
     private func submit() async {
         form.errorMessage = nil
         do {
-            if form.isCreatingAccount {
-                _ = try await store.createAccount(email: form.email, password: form.password)
-                form.password = ""
-            } else {
-                try await store.signIn(email: form.email, password: form.password)
-                dismiss()
-            }
+            try await store.signIn(email: form.email, password: form.password)
+            dismiss()
         } catch {
             form.errorMessage = error.localizedDescription
         }

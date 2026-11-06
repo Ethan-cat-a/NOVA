@@ -131,6 +131,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            Task { await NovaAccountStore.shared.handleGoogleOAuthCallback(url) }
+        }
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         guard !panel.isVisible else { return true }
         showPanel()

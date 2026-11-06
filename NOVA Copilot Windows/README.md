@@ -2,16 +2,16 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot icon" />
   <h1>NOVA Copilot for Windows</h1>
   <p><strong>Your AI copilot on Windows 10 and 11.</strong></p>
-  <p><img alt="Windows version" src="https://img.shields.io/badge/version-1.5.0-2857C5?style=flat-square&logo=windows&logoColor=white" /></p>
+  <p><img alt="Windows source version" src="https://img.shields.io/badge/source-1.5.1-2857C5?style=flat-square&logo=windows&logoColor=white" /></p>
   <p>Standalone Windows edition · Python / Tkinter · NOVA V8 backend</p>
-  <p>Version 1.5.0 adds verified account sign-in and protected chat access.</p>
+  <p>Source version 1.5.1 signs in to existing accounts with Google or email/password; account creation is not offered in the app.</p>
 </div>
 
 ---
 
 ## Download
 
-Download and open the [standalone NOVA Copilot for Windows 1.5.0 app](https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.0/NOVA-Copilot-Windows-1.5.0.exe). It runs without Python or ZIP extraction.
+Download and open the [latest published standalone NOVA Copilot for Windows (1.5.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.0/NOVA-Copilot-Windows-1.5.0.exe). It runs without Python or ZIP extraction. A 1.5.1 installer has not been published yet.
 
 Windows SmartScreen may warn because this free build is unsigned. Choose **More info → Run anyway** only if you downloaded the ZIP from the official NOVA GitHub release.
 
@@ -25,7 +25,7 @@ Windows SmartScreen may warn because this free build is unsigned. Choose **More 
 - Summarize or rewrite copied text after previewing it.
 - A visible **Update** button checks the latest Windows release and opens its GitHub page when you approve. Updates are downloaded and installed manually.
 - Recent conversations, local chat history, Keep on Top and optional Launch at Login.
-- Version 1.5.0 source adds email verification and server-side usage limits: 25 messages per day for regular accounts, with unlimited daily use for the verified owner account.
+- Version 1.5.1 source removes self-service account creation. The precreated owner account signs in with its existing Google identity or password; server-side usage limits still apply.
 
 Windows supports `.docx` files and PDFs with selectable text. Scanned PDF OCR, image OCR and screen/window capture are not available in this Windows build. Word export creates a new text-based `.docx`; it does not preserve the source document’s formatting, tables or images.
 
@@ -44,7 +44,9 @@ To build your own executable, run `build_windows.bat`. The script installs the p
 - Clipboard contents are read only when you choose a clipboard action.
 - Word and PDF files are read locally; only reviewed extracted text is included when you send a message.
 
-See the [1.5.0 release notes](RELEASE_NOTES_v1.5.0.md) and [1.4.2 release notes](RELEASE_NOTES_v1.4.2.md).
+Google sign-in uses Supabase Auth in your system browser. The first project setup requires Google OAuth credentials and the loopback callback URL in Supabase; see the [setup guide](../GOOGLE_SIGN_IN_SETUP.md). The Google client secret stays in Supabase and is never included in the app.
+
+See the [1.5.1 source notes](RELEASE_NOTES_v1.5.1.md), [1.5.0 release notes](RELEASE_NOTES_v1.5.0.md) and [1.4.2 release notes](RELEASE_NOTES_v1.4.2.md).
 
 ---
 

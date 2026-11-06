@@ -3,7 +3,7 @@
   <h1>NOVA COPILOT</h1>
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
-  <p><strong>Version 1.5.0</strong> adds verified accounts and protected chat access, with server-enforced usage limits.</p>
+  <p><strong>Source version 1.5.1</strong> removes in-app account creation and signs in to existing accounts with Google or existing credentials.</p>
   <p>
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg"><strong>Download latest macOS app · 1.5.0 DMG</strong></a>
     &nbsp; · &nbsp;
@@ -12,8 +12,8 @@
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.5.0-263C63?style=flat-square&logo=apple&logoColor=white" />
-    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
+    <img alt="macOS" src="https://img.shields.io/badge/macOS-1.5.1-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.1-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
 </div>
@@ -26,10 +26,10 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Version 1.5.0 · Native Swift / AppKit</strong></p>
+      <p><strong>Source version 1.5.1 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with a menu-bar control, floating assistant panel and quick keyboard access.</p>
       <ul>
-        <li>Email-verified account creation and sign-in with server-enforced usage limits</li>
+        <li>Sign in to existing accounts with Google or email/password; no in-app sign-up</li>
         <li>macOS 13 or later</li>
         <li>Apple silicon and Intel</li>
         <li>Shortcut: <code>⌘ + ⇧ + Space</code></li>
@@ -49,10 +49,10 @@
     </td>
     <td width="50%" valign="top">
       <h3>⊞ &nbsp; NOVA Copilot for Windows</h3>
-      <p><strong>Version 1.5.0 · Python / Tkinter</strong></p>
+      <p><strong>Source version 1.5.1 · Python / Tkinter</strong></p>
       <p>A standalone Windows edition for Windows 10 and 11 PCs.</p>
       <ul>
-        <li>Email-verified account creation and sign-in with server-enforced usage limits</li>
+        <li>Sign in to existing accounts with Google or email/password; no in-app sign-up</li>
         <li>Windows 10 or Windows 11</li>
         <li>Shortcut: <code>Ctrl + Shift + Space</code></li>
         <li>System tray and floating panel</li>
@@ -64,6 +64,8 @@
     </td>
   </tr>
 </table>
+
+> The source is at 1.5.1. Download links above still point to the latest published 1.5.0 installers.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
@@ -122,6 +124,10 @@ The Mac and Windows editions share the same product identity and NOVA V8 service
 - The Mac edition can review extracted text from images, PDFs and Word documents before sending it. The Windows edition supports `.docx` and PDFs with selectable text; scanned-document OCR and image import are currently Mac-only.
 - Screen/window capture uses the macOS 14 or later picker; importing images and PDFs works on macOS 13 or later.
 - Word Doc mode saves generated text as a new `.docx`; formatting, tables and images from an imported file are not preserved.
+
+## Google sign-in setup
+
+The desktop clients can sign in with Google through Supabase Auth, avoiding confirmation emails for Google accounts. Project owners must configure a Google OAuth client and the app callback URLs once; see [Google sign-in setup](GOOGLE_SIGN_IN_SETUP.md). Keep the Google client secret in Supabase and out of the app and source repository.
 
 ## Project layout
 

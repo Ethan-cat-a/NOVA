@@ -2,8 +2,8 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS" src="https://img.shields.io/badge/macOS-1.5.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.5.0 adds verified account sign-in and protected chat access.</p>
+  <p><img alt="macOS" src="https://img.shields.io/badge/macOS-1.5.1-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Source version 1.5.1 signs in to existing accounts with Google or email/password; account creation is not offered in the app.</p>
   <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg"><strong>↓ Download Mac app · 1.5.0 DMG</strong></a></p>
 </div>
 
@@ -33,11 +33,11 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 - New Word exports format headings, lists, bold, italics and code blocks. Existing page layouts, tables and images are not retained. Word Doc mode supports one Word source and up to four reference files per request.
 - Completed-answer actions appear on hover; Copy remains available to assistive technologies.
 - The panel follows macOS light and dark appearance.
-- Version 1.5.0 source adds email verification and server-side usage limits: 25 messages per day for regular accounts, with unlimited daily use for the verified owner account.
+- Version 1.5.1 source removes self-service account creation. The precreated owner account signs in with its existing Google identity or password; server-side usage limits still apply.
 
 ## Install
 
-1. [Download the latest Mac app DMG](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg).
+1. [Download the latest published Mac app DMG (1.5.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg). A 1.5.1 installer has not been published yet.
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 
@@ -53,6 +53,8 @@ Requires **macOS 13 or later**. The universal build supports Apple silicon and I
 - The Supabase publishable key is used only for account authentication; the access and refresh tokens are stored in macOS Keychain.
 - Chat history stays on your Mac.
 - Clipboard text is read only when you choose the clipboard action; the app does not monitor it.
+
+Google sign-in uses Supabase Auth and a system browser. The first project setup requires Google OAuth credentials and the app callback URL in Supabase; see the [setup guide](../GOOGLE_SIGN_IN_SETUP.md). The Google client secret stays in Supabase and is never included in the app.
 
 ## Build from source
 

@@ -1,3 +1,10 @@
+# NOVA Copilot Version 1.5.1 (2026-11-06)
+
+- Removes self-service email/password account creation from the Mac and Windows clients. Email/password remains available for existing accounts.
+- Keeps Google sign-in as the simple path to an existing account, including the precreated owner account when the verified Google email matches.
+- Bumps the Mac build number to 19 and both clients to version 1.5.1.
+- No shared owner login code is embedded in the public app; the owner account remains protected by Google authentication or its existing password.
+
 # NOVA Copilot Version 1.5.0 (2026-11-06)
 
 - Adds email/password account creation and sign-in. Chat requires a verified email address.

@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import base64
+import hashlib
+import http.server
 import json
 import os
 import queue
+import secrets
 import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 import webbrowser
@@ -27,10 +32,11 @@ except Exception:  # Tray support is optional when running directly from source.
     Image = ImageDraw = ImageFont = None
 
 APP_NAME = "NOVA Copilot"
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.5.1"
 CHAT_URL = "https://nova-copilot-gateway.vercel.app/api/chat"
 SUPABASE_URL = "https://nhzpodixkjhynvcwnzok.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_LqyBAJMOMir72jmLcziX_A_wArHa_L0"
+GOOGLE_OAUTH_REDIRECT_URI = "http://127.0.0.1:8765/oauth/callback"
 GITHUB_RELEASES_URL = "https://api.github.com/repos/Ethan-cat-a/NOVA/releases?per_page=100"
 HOTKEY_LABEL = "Ctrl + Shift + Space"
 CONTEXT_LIMIT = 15_000
@@ -273,6 +279,7 @@ class NovaCopilotApp:
         self._account_window: tk.Toplevel | None = None
         self._account_status_label: tk.Label | None = None
         self._account_submit_button: tk.Button | None = None
+        self._account_google_button: tk.Button | None = None
 
         self._configure_styles()
         self._build_ui()
@@ -395,15 +402,28 @@ class NovaCopilotApp:
         else:
             email_var = tk.StringVar()
             password_var = tk.StringVar()
-            create_var = tk.BooleanVar(value=False)
+            google_button = tk.Button(
+                body,
+                text="Continue with Google",
+                command=self._start_google_sign_in,
+                bg=WHITE,
+                fg=INK,
+                relief="solid",
+                bd=1,
+                padx=12,
+                pady=7,
+            )
+            google_button.pack(fill="x", pady=(0, 8))
+            self._account_google_button = google_button
+            tk.Label(body, text="Sign in with the Google account linked to your existing NOVA account.", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), wraplength=320, justify="left", anchor="w").pack(fill="x", pady=(0, 8))
+            ttk.Separator(body, orient="horizontal").pack(fill="x", pady=(0, 8))
             tk.Label(body, text="Email address", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), anchor="w").pack(fill="x")
             email_entry = tk.Entry(body, textvariable=email_var, font=("Segoe UI", 10), relief="solid", bd=1)
             email_entry.pack(fill="x", pady=(3, 8))
             tk.Label(body, text="Password", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), anchor="w").pack(fill="x")
             password_entry = tk.Entry(body, textvariable=password_var, show="•", font=("Segoe UI", 10), relief="solid", bd=1)
             password_entry.pack(fill="x", pady=(3, 5))
-            tk.Checkbutton(body, text="Create a new account", variable=create_var, bg=WHITE, fg=INK, activebackground=WHITE, selectcolor=WHITE, font=("Segoe UI", 9)).pack(anchor="w")
-            tk.Label(body, text="Verify your email before signing in. Email confirmation is required for chat access.", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), wraplength=320, justify="left", anchor="w").pack(fill="x", pady=(2, 8))
+            tk.Label(body, text="Email and password are for signing in to an existing account.", bg=WHITE, fg=MUTED, font=("Segoe UI", 8), wraplength=320, justify="left", anchor="w").pack(fill="x", pady=(2, 8))
             status = tk.Label(body, text="", bg=WHITE, fg=ACCENT, font=("Segoe UI", 8), wraplength=320, justify="left", anchor="w")
             status.pack(fill="x", pady=(0, 6))
             self._account_status_label = status
@@ -411,24 +431,20 @@ class NovaCopilotApp:
             submit_button.pack(anchor="e")
             self._account_submit_button = submit_button
 
-            def update_mode(*_args: Any) -> None:
-                submit_button.configure(text="Create account" if create_var.get() else "Sign in")
-
-            create_var.trace_add("write", update_mode)
-
             def submit() -> None:
                 email = email_var.get().strip().lower()
                 password = password_var.get()
-                creating = create_var.get()
-                if not email or len(password) < 8:
-                    status.configure(text="Enter your email and a password of at least 8 characters.", fg=ORANGE)
+                if not email or not password:
+                    status.configure(text="Enter your email and password.", fg=ORANGE)
                     return
                 if self._account_auth_pending:
                     return
                 self._account_auth_pending = True
                 submit_button.configure(text="Working…", state="disabled")
+                if self._account_google_button and self._account_google_button.winfo_exists():
+                    self._account_google_button.configure(state="disabled")
                 status.configure(text="Contacting the sign-in service…", fg=MUTED)
-                threading.Thread(target=self._account_auth_worker, args=(email, password, creating), daemon=True).start()
+                threading.Thread(target=self._account_auth_worker, args=(email, password), daemon=True).start()
 
             submit_button.configure(command=submit)
             password_entry.bind("<Return>", lambda _event: submit())
@@ -437,16 +453,9 @@ class NovaCopilotApp:
         window.geometry(f"360x{window.winfo_reqheight()}")
         window.grab_set()
 
-    def _account_auth_worker(self, email: str, password: str, creating: bool) -> None:
+    def _account_auth_worker(self, email: str, password: str) -> None:
         try:
-            if creating:
-                result = self._supabase_auth_request("/auth/v1/signup", {"email": email, "password": password})
-                user = result.get("user") or {}
-                if not result.get("access_token") or not (user.get("email_confirmed_at") or user.get("confirmed_at")):
-                    self.events.put(("account-auth", (None, "Check your email to verify your account, then come back here to sign in.", None)))
-                    return
-            else:
-                result = self._supabase_auth_request("/auth/v1/token?grant_type=password", {"email": email, "password": password})
+            result = self._supabase_auth_request("/auth/v1/token?grant_type=password", {"email": email, "password": password})
             if not result.get("access_token") or not result.get("refresh_token"):
                 raise RuntimeError("Sign-in did not return a session. Verify your email and try again.")
             user = result.get("user") or {}
@@ -462,6 +471,103 @@ class NovaCopilotApp:
         except Exception as exc:
             self.events.put(("account-auth", (None, "", str(exc))))
 
+    def _start_google_sign_in(self) -> None:
+        if self._account_auth_pending:
+            return
+        self._account_auth_pending = True
+        if self._account_google_button and self._account_google_button.winfo_exists():
+            self._account_google_button.configure(text="Waiting for Google…", state="disabled")
+        if self._account_submit_button and self._account_submit_button.winfo_exists():
+            self._account_submit_button.configure(state="disabled")
+        if self._account_status_label and self._account_status_label.winfo_exists():
+            self._account_status_label.configure(text="Opening Google in your browser…", fg=MUTED)
+        threading.Thread(target=self._google_auth_worker, daemon=True).start()
+
+    def _google_auth_worker(self) -> None:
+        class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
+            server_version = "NOVAAuth"
+            sys_version = ""
+
+            def log_message(self, _format: str, *_args: Any) -> None:
+                # Never log callback URLs because they contain short-lived auth codes.
+                return
+
+            def do_GET(self) -> None:
+                parsed = urllib.parse.urlparse(self.path)
+                if parsed.path != "/oauth/callback":
+                    self.send_error(404)
+                    return
+                params = urllib.parse.parse_qs(parsed.query)
+                code = (params.get("code") or [""])[0]
+                error = (params.get("error_description") or params.get("error") or [""])[0]
+                if code:
+                    self.server.oauth_result = {"code": code}
+                    page = "Google sign-in complete. You can return to NOVA Copilot."
+                    status = 200
+                elif error:
+                    self.server.oauth_result = {"error": error}
+                    page = "Google sign-in was not completed. Return to NOVA Copilot and try again."
+                    status = 200
+                else:
+                    self.server.oauth_result = {"error": "Google did not return a sign-in code."}
+                    page = "Google did not return a sign-in code. Return to NOVA Copilot and try again."
+                    status = 400
+                body = ("<!doctype html><meta charset='utf-8'><title>NOVA Copilot</title>"
+                        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+                        "<main style='font:16px -apple-system,BlinkMacSystemFont,sans-serif;max-width:34rem;margin:12vh auto;padding:2rem'>"
+                        "<h2>NOVA Copilot</h2><p>" + page + "</p></main>").encode("utf-8")
+                self.send_response(status)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
+                self.end_headers()
+                self.wfile.write(body)
+
+        try:
+            verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b"=").decode("ascii")
+            challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest()).rstrip(b"=").decode("ascii")
+            server = http.server.HTTPServer(("127.0.0.1", 8765), OAuthCallbackHandler)
+            server.timeout = 120
+            server.oauth_result = None
+            try:
+                query = urllib.parse.urlencode({
+                    "provider": "google",
+                    "redirect_to": GOOGLE_OAUTH_REDIRECT_URI,
+                    "code_challenge": challenge,
+                    "code_challenge_method": "s256",
+                })
+                authorization_url = f"{SUPABASE_URL}/auth/v1/authorize?{query}"
+                if not webbrowser.open(authorization_url, new=1):
+                    raise RuntimeError("Windows could not open your browser. Try again or use email sign-in.")
+                server.handle_request()
+                outcome = server.oauth_result
+                if not outcome:
+                    raise RuntimeError("Google sign-in timed out. Click Continue with Google and try again.")
+                if outcome.get("error"):
+                    raise RuntimeError(str(outcome["error"]))
+
+                result = self._supabase_auth_request("/auth/v1/token?grant_type=pkce", {
+                    "auth_code": str(outcome["code"]),
+                    "code_verifier": verifier,
+                })
+                user = result.get("user") or {}
+                if not result.get("access_token") or not result.get("refresh_token"):
+                    raise RuntimeError("Google sign-in did not return a NOVA session. Try again.")
+                if not (user.get("email_confirmed_at") or user.get("confirmed_at")):
+                    raise RuntimeError("Google didn’t return a verified email address. Try another Google account.")
+                session = {
+                    "access_token": result["access_token"],
+                    "refresh_token": result["refresh_token"],
+                    "expires_at": result.get("expires_at") or time.time() + int(result.get("expires_in", 3600)),
+                    "email": user.get("email") or "",
+                }
+                self.events.put(("account-auth", (session, "", None)))
+            finally:
+                server.server_close()
+        except Exception as exc:
+            self.events.put(("account-auth", (None, "", str(exc))))
+
     def _close_account_window(self, window: tk.Toplevel) -> None:
         try:
             window.grab_release()
@@ -472,6 +578,7 @@ class NovaCopilotApp:
             self._account_window = None
             self._account_status_label = None
             self._account_submit_button = None
+            self._account_google_button = None
 
     def _sign_out(self, window: tk.Toplevel) -> None:
         session = self.auth_session
@@ -1241,6 +1348,8 @@ class NovaCopilotApp:
                 if kind == "account-auth":
                     session, message, error = payload
                     self._account_auth_pending = False
+                    if self._account_google_button and self._account_google_button.winfo_exists():
+                        self._account_google_button.configure(text="Continue with Google", state="normal")
                     if session:
                         try:
                             self._save_auth_session(session)
@@ -1255,7 +1364,7 @@ class NovaCopilotApp:
                     elif self._account_status_label and self._account_status_label.winfo_exists():
                         self._account_status_label.configure(text=error or message, fg=ORANGE if error else ACCENT)
                         if self._account_submit_button and self._account_submit_button.winfo_exists():
-                            self._account_submit_button.configure(text="Create account" if "verify your account" in message else "Sign in", state="normal")
+                            self._account_submit_button.configure(text="Sign in", state="normal")
                 elif kind == "auth-session":
                     self.auth_session = payload
                     self._refresh_account_button()
