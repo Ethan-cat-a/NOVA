@@ -117,7 +117,10 @@ class WindowsAppTests(unittest.TestCase):
     def test_stream_decodes_utf8_split_across_network_chunks(self):
         response = FakeResponse([b"Hello ", b"\xe4", b"\xbd", b"\xa0!"])
         control = nova.ActiveRequest("response-id")
-        app = SimpleNamespace(events=queue.Queue())
+        app = SimpleNamespace(
+            events=queue.Queue(),
+            auth_session={"access_token": "test-access-token", "expires_at": time.time() + 3600},
+        )
         with patch.object(nova.urllib.request, "urlopen", return_value=response):
             nova.NovaCopilotApp._stream_reply(
                 app,
