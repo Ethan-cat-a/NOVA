@@ -2,6 +2,8 @@
 
 Private server-side gateway for NOVA Copilot chat. It validates Supabase sessions, enforces atomic daily and burst limits, and streams the existing NOVA V8 response through without changing the model backend.
 
+In Vercel, set the project Root Directory to `nova-copilot-gateway` so `api/chat.js` is exposed at `/api/chat`.
+
 Required Vercel environment variables:
 
 - `SUPABASE_URL`

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @MainActor
@@ -156,10 +157,18 @@ struct NovaAccountView: View {
         VStack(alignment: .leading, spacing: 7) {
             Text("OWNER PROFILE")
                 .font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
-            SecureField("One-time owner access code", text: $form.ownerCode)
-                .textFieldStyle(.roundedBorder)
-                .textContentType(.oneTimeCode)
-                .autocorrectionDisabled()
+            HStack(spacing: 8) {
+                SecureField("One-time owner access code", text: $form.ownerCode)
+                    .textFieldStyle(.roundedBorder)
+                    .textContentType(.oneTimeCode)
+                    .autocorrectionDisabled()
+                Button("Paste", systemImage: "doc.on.clipboard") {
+                    pasteOwnerCode()
+                }
+                .buttonStyle(.bordered)
+                .help("Paste the owner access code from the clipboard")
+                .accessibilityLabel("Paste owner access code")
+            }
             Button {
                 Task { await redeemOwnerCode() }
             } label: {
@@ -169,6 +178,15 @@ struct NovaAccountView: View {
             .buttonStyle(.bordered)
             .disabled(store.isWorking || form.ownerCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+    }
+
+    private func pasteOwnerCode() {
+        form.errorMessage = nil
+        guard let pastedCode = NSPasteboard.general.string(forType: .string) else {
+            form.errorMessage = "The clipboard does not contain plain text."
+            return
+        }
+        form.ownerCode = pastedCode.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     @MainActor

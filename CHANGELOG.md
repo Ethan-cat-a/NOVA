@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.5.4 (2026-11-07)
+
+- Fixes owner-code entry with a visible **Paste** button that reads clipboard text directly while keeping the code masked.
+- Fixes the production gateway's `/api/chat` route by deploying from the `nova-copilot-gateway` project directory.
+- Bumps the Mac marketing version to 1.5.4 and build number to 21.
+
 # NOVA Copilot Version 1.5.2 (2026-11-07)
 
 - Makes account sign-in optional. Chat starts a Supabase guest profile automatically; existing Google and email/password sign-in remain available.
