@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 21175)
+Total output lines: 1897
+
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -32,11 +35,14 @@ struct AssistantView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            if let message = updateStatus.message {
+            if updateStatus.isChecking || updateStatus.message != nil {
+                let message = updateStatus.message ?? "Checking for updates…"
                 HStack(spacing: 7) {
-                    Image(systemName: updateStatus.isError
-                          ? "exclamationmark.circle.fill"
-                          : updateStatus.hasAvailableUpdate ? "arrow.down.circle.fill" : "checkmark.circle.fill")
+                    Image(systemName: updateStatus.isChecking
+                          ? "arrow.triangle.2.circlepath"
+                          : updateStatus.isError
+                              ? "exclamationmark.circle.fill"
+                              : updateStatus.hasAvailableUpdate ? "arrow.down.circle.fill" : "checkmark.circle.fill")
                     Text(message).lineLimit(2)
                     Spacer(minLength: 0)
                     if updateStatus.hasReleaseNotes {
@@ -51,11 +57,13 @@ struct AssistantView: View {
                                 )
                             }
                     }
-                    Button { updateStatus.dismiss() } label: {
-                        Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                    if !updateStatus.isChecking {
+                        Button { updateStatus.dismiss() } label: {
+                            Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Dismiss update status")
                     }
-                    .buttonStyle(.plain)
-                    .help("Dismiss update status")
                 }
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(updateStatus.isError ? Color.orange : accent)
@@ -157,7 +165,7 @@ struct AssistantView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             Image("NOVAIcon")
                 .resizable()
                 .scaledToFill()
@@ -210,11 +218,16 @@ struct AssistantView: View {
             .help(panelState.isPinned ? "Unpin from top" : "Keep on top")
 
             Button(action: onCheckForUpdates) {
-                Image(systemName: updateStatus.isChecking ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(muted)
-                    .frame(width: 29, height: 29)
-                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                HStack(spacing: 5) {
+                    Image(systemName: updateStatus.isChecking ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Updates")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(accent)
+                .padding(.horizontal, 8)
+                .frame(height: 29)
+                .background(accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
             .disabled(updateStatus.isChecking)
@@ -305,6 +318,10 @@ struct AssistantView: View {
                 Toggle("Keep on top", isOn: Binding(get: { panelState.isPinned }, set: { panelState.setPinned($0) }))
                 Toggle("Launch at Login", isOn: Binding(get: { panelState.launchAtLogin }, set: { panelState.setLaunchAtLogin($0) }))
                 Button { onShowPreferences() } label: { Label("Preferences…", systemImage: "slider.horizontal.3") }
+                Button(action: onCheckForUpdates) {
+                    Label(updateStatus.isChecking ? "Checking for Updates…" : "Check for Updates Now", systemImage: "arrow.down.circle")
+                }
+                .disabled(updateStatus.isChecking)
                 Divider()
                 Button { runClipboardQuickAction(.summarize) } label: { Label("Summarize copied text", systemImage: "text.alignleft") }
                 Button { runClipboardQuickAction(.rewrite) } label: { Label("Rewrite copied text", systemImage: "pencil.line") }
@@ -333,7 +350,7 @@ struct AssistantView: View {
             .buttonStyle(.plain)
             .help("Hide (⌘⇧Space to reopen)")
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 10)
         .padding(.vertical, 12)
         .background(Color(nsColor: .windowBackgroundColor).opacity(0.97))
         .sheet(isPresented: $showsAccountSheet) {
@@ -636,451 +653,7 @@ struct AssistantView: View {
     }
 
     private func handleContextDrop(_ providers: [NSItemProvider]) -> Bool {
-        let fileProviders = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }
-        guard !fileProviders.isEmpty else {
-            showFeedback("Drop an image, PDF or Word document to add context.", isError: true)
-            return false
-        }
-
-        let group = DispatchGroup()
-        let lock = NSLock()
-        var droppedURLs = [URL?](repeating: nil, count: fileProviders.count)
-        for (index, provider) in fileProviders.enumerated() {
-            group.enter()
-            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
-                let url: URL?
-                if let value = item as? URL {
-                    url = value
-                } else if let value = item as? NSURL {
-                    url = value as URL
-                } else if let data = item as? Data,
-                          let string = String(data: data, encoding: .utf8) {
-                    url = URL(string: string.trimmingCharacters(in: .whitespacesAndNewlines))
-                } else {
-                    url = nil
-                }
-                lock.lock()
-                droppedURLs[index] = url
-                lock.unlock()
-                group.leave()
-            }
-        }
-        group.notify(queue: .main) {
-            let urls = droppedURLs.compactMap { $0 }
-            if urls.isEmpty {
-                showFeedback("Couldn’t read those dropped files. Try choosing them with the paperclip menu.", isError: true)
-            } else {
-                if urls.count < fileProviders.count {
-                    showFeedback("Some dropped files couldn’t be read.", isError: true)
-                }
-                importContextFiles(urls)
-            }
-        }
-        return true
-    }
-
-    private func importContextFiles(_ urls: [URL]) {
-        guard !model.isSending else {
-            showFeedback("Wait for the current reply to finish before adding context.", isError: true)
-            return
-        }
-        let occupiedSlots = viewState.contextAttachments.count
-            + viewState.pendingContextURLs.count
-            + (viewState.contextReview == nil ? 0 : 1)
-            + (viewState.isExtractingContext ? 1 : 0)
-        let remainingSlots = max(0, 5 - occupiedSlots)
-        guard remainingSlots > 0 else {
-            showFeedback("You can add up to 5 files to one message. Remove a file to add another.", isError: true)
-            return
-        }
-        let acceptedURLs = Array(urls.prefix(remainingSlots))
-        if acceptedURLs.count < urls.count {
-            showFeedback("NOVA can review up to 5 files for one message. The extra files were skipped.", isError: true)
-        }
-        viewState.pendingContextURLs.append(contentsOf: acceptedURLs)
-        processNextContextFile()
-    }
-
-    private func processNextContextFile() {
-        guard !viewState.isExtractingContext,
-              viewState.contextReview == nil,
-              !viewState.pendingContextURLs.isEmpty else { return }
-        let url = viewState.pendingContextURLs.removeFirst()
-        viewState.isExtractingContext = true
-        Task {
-            do {
-                let attachment = try await ContextTextExtractor.readFile(at: url)
-                viewState.isExtractingContext = false
-                viewState.contextReview = attachment
-            } catch {
-                viewState.isExtractingContext = false
-                showFeedback(error.localizedDescription, isError: true)
-                processNextContextFile()
-            }
-        }
-    }
-
-    private func captureScreenContext() {
-        guard !model.isSending else {
-            showFeedback("Wait for the current reply to finish before capturing context.", isError: true)
-            return
-        }
-        guard #available(macOS 14.0, *), let screenPicker = viewState.screenPicker else {
-            showFeedback(ContextCaptureError.systemCaptureUnavailable.localizedDescription, isError: true)
-            return
-        }
-        viewState.isExtractingContext = true
-        do {
-            try screenPicker.present { result in
-                viewState.isExtractingContext = false
-                switch result {
-                case .success(let attachment):
-                    viewState.contextReview = attachment
-                case .failure(let error) where error is CancellationError:
-                    break
-                case .failure(let error):
-                    showFeedback("Couldn’t read the capture: \(error.localizedDescription)", isError: true)
-                }
-            }
-        } catch {
-            viewState.isExtractingContext = false
-            showFeedback(error.localizedDescription, isError: true)
-        }
-    }
-
-    private func sendMessage() {
-        if model.isSending {
-            model.send()
-            return
-        }
-        let attachments = viewState.contextAttachments
-        let wordDocuments = attachments.filter { $0.kind == .word }
-        if model.currentMode == .wordDocument, wordDocuments.count > 1 {
-            showFeedback("Word Doc mode can fill one Word document at a time. Keep one Word file attached and use the other files as references.", isError: true)
-            return
-        }
-        if model.currentMode == .wordDocument, wordDocuments.first?.wasTruncated == true {
-            showFeedback("This document is too long to fill safely. Try a shorter document or ask about it in another mode.", isError: true)
-            return
-        }
-        model.send(contextAttachments: attachments)
-        if !attachments.isEmpty { viewState.contextAttachments = [] }
-    }
-
-    private func copyResponse(_ content: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(content, forType: .string)
-        showFeedback("Copied.", duration: 1.5)
-    }
-
-    private func copyCodeBlock(_ content: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(content, forType: .string)
-        showFeedback("Copied code.", duration: 1.5)
-    }
-
-    private func contextAttachmentChip(_ attachment: ContextAttachment) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: attachment.kind.icon)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(accent)
-            Text(attachment.name)
-                .font(.system(size: 9.5, weight: .medium))
-                .lineLimit(1)
-                .frame(maxWidth: 110)
-            Button { viewState.contextReview = attachment } label: {
-                Image(systemName: "eye")
-                    .font(.system(size: 9, weight: .semibold))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(muted)
-            .help("Review extracted text")
-            Button {
-                viewState.contextAttachments.removeAll { $0.id == attachment.id }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 8, weight: .bold))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(muted)
-            .help("Remove \(attachment.name)")
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(Color(nsColor: .controlBackgroundColor), in: Capsule())
-        .overlay(Capsule().stroke(Color(nsColor: .separatorColor), lineWidth: 1))
-        .help("\(attachment.kind.label) · \(attachment.extractedText.count.formatted()) characters extracted. Review or remove this file.")
-    }
-
-    private func showFeedback(_ message: String, isError: Bool = false, duration: TimeInterval = 4) {
-        withAnimation(.easeOut(duration: 0.18)) {
-            viewState.feedbackMessage = message
-            viewState.feedbackIsError = isError
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-            guard viewState.feedbackMessage == message else { return }
-            withAnimation(.easeIn(duration: 0.18)) { viewState.feedbackMessage = nil }
-        }
-    }
-
-    private var composer: some View {
-        VStack(spacing: 8) {
-            if let feedbackMessage = viewState.feedbackMessage {
-                HStack(spacing: 7) {
-                    Image(systemName: viewState.feedbackIsError ? "info.circle.fill" : "checkmark.circle.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text(feedbackMessage)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    Button {
-                        withAnimation(.easeIn(duration: 0.15)) { viewState.feedbackMessage = nil }
-                    } label: {
-                        Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Dismiss message")
-                }
-                .foregroundStyle(viewState.feedbackIsError ? Color.orange : accent)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background((viewState.feedbackIsError ? Color.orange : accent).opacity(0.07), in: RoundedRectangle(cornerRadius: 9))
-                .accessibilityElement(children: .combine)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
-            if panelState.launchLoginError != nil {
-                HStack(spacing: 6) {
-                    Image(systemName: "info.circle")
-                    Text(panelState.launchLoginError ?? "")
-                    Spacer(minLength: 0)
-                    Button { panelState.clearLaunchLoginError() } label: { Image(systemName: "xmark") }.buttonStyle(.plain)
-                }
-                .font(.system(size: 10))
-                .foregroundStyle(Color.orange)
-            }
-            HStack(alignment: .bottom, spacing: 8) {
-                Menu {
-                    Button {
-                        viewState.showsContextImporter = true
-                    } label: {
-                        Label("Add image, PDF or Word document…", systemImage: "doc.badge.plus")
-                    }
-                    if #available(macOS 14.0, *) {
-                        Button(action: captureScreenContext) {
-                            Label("Capture a window or screen…", systemImage: "viewfinder")
-                        }
-                    } else {
-                        Button {
-                            showFeedback(ContextCaptureError.systemCaptureUnavailable.localizedDescription, isError: true)
-                        } label: {
-                            Label("Capture a window or screen… (macOS 14+)", systemImage: "viewfinder")
-                        }
-                    }
-                    Divider()
-                    Button {
-                        if model.insertClipboardContext() {
-                            showFeedback("Copied text added to your draft.")
-                        } else {
-                            showFeedback("No copied text found. Copy some text in any app first.", isError: true)
-                        }
-                        inputFocused = true
-                    } label: {
-                        Label("Add copied text", systemImage: "doc.on.clipboard")
-                    }
-                } label: {
-                    Image(systemName: "paperclip")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(muted)
-                        .frame(width: 32, height: 38)
-                        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
-                }
-                .menuStyle(.borderlessButton)
-                .help("Add up to 5 images, PDFs or Word documents, capture a screen, or add copied text")
-
-                TextField(
-                    viewState.contextAttachments.isEmpty
-                        ? (model.currentMode == .wordDocument ? "Describe your Word document…" : "Message Nova V8…")
-                        : (model.currentMode == .wordDocument && viewState.contextAttachments.contains(where: { $0.kind == .word })
-                           ? "How should NOVA fill this document?"
-                           : "Ask about these files…"),
-                    text: $model.input,
-                    axis: .vertical
-                )
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .lineLimit(1...5)
-                    .focused($inputFocused)
-                    .onSubmit { sendMessage() }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .frame(minHeight: 38)
-                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 11))
-                    .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
-
-                Button { sendMessage() } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: model.isSending ? "stop.fill" : (model.currentMode == .wordDocument ? "doc.text" : "arrow.up"))
-                        if model.isSending {
-                            Text("Stop")
-                        } else if model.currentMode == .wordDocument {
-                            Text(viewState.contextAttachments.contains(where: { $0.kind == .word }) ? "Fill" : "Create")
-                        }
-                    }
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, (model.currentMode == .wordDocument && !model.isSending) || model.isSending ? 10 : 0)
-                    .frame(minWidth: 38, minHeight: 38)
-                    .background(model.isSending ? Color(red: 0.35, green: 0.40, blue: 0.49) : accent, in: RoundedRectangle(cornerRadius: 11))
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.return, modifiers: .command)
-                .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty)
-                .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty ? 0.55 : 1)
-                .accessibilityLabel(model.isSending ? "Stop response" : "Send message")
-                .help(model.isSending ? "Stop response" : (model.currentMode == .wordDocument ? "Create or fill a Word document (⌘Return)" : "Send message (⌘Return)"))
-            }
-            if viewState.isExtractingContext {
-                HStack(spacing: 7) {
-                    ProgressView().controlSize(.small).scaleEffect(0.75)
-                    Text("Reading text on this Mac…")
-                    Spacer(minLength: 0)
-                }
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(muted)
-            }
-            if !viewState.contextAttachments.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(viewState.contextAttachments) { attachment in
-                            contextAttachmentChip(attachment)
-                        }
-                    }
-                    .padding(.vertical, 1)
-                }
-                .accessibilityLabel("Reviewed files attached to this message")
-            }
-            if !viewState.pendingContextURLs.isEmpty {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.small).scaleEffect(0.72)
-                    Text("\(viewState.pendingContextURLs.count) more file\(viewState.pendingContextURLs.count == 1 ? "" : "s") waiting for review")
-                    Spacer(minLength: 0)
-                }
-                .font(.system(size: 9.5, weight: .medium))
-                .foregroundStyle(muted)
-            }
-            if viewState.isTargetingContext {
-                Text("Drop up to 5 images, PDFs or Word documents to review their text")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
-            }
-            HStack(spacing: 5) {
-                Text("⌘Return to send")
-                Text("·")
-                Text("⌘⇧Space to toggle")
-                Spacer()
-                Text("Chats saved on this Mac")
-            }
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(muted.opacity(0.82))
-        }
-        .padding(.horizontal, 13)
-        .padding(.top, 11)
-        .padding(.bottom, 11)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .overlay(alignment: .top) { Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 1) }
-    }
-}
-
-@MainActor
-private final class AssistantViewState: ObservableObject {
-    @Published var showAlert = false
-    @Published var alertTitle = "NOVA Copilot"
-    @Published var alertMessage = ""
-    @Published var clipboardReview: ClipboardActionReview?
-    @Published var rewriteTone: RewriteTone {
-        didSet { UserDefaults.standard.set(rewriteTone.rawValue, forKey: Self.rewriteToneKey) }
-    }
-    @Published var showFirstRunTip: Bool
-    @Published var feedbackMessage: String?
-    @Published var feedbackIsError = false
-    @Published var showMoreExamples = false
-    @Published var showsContextImporter = false
-    @Published var contextReview: ContextAttachment?
-    @Published var contextAttachments: [ContextAttachment] = []
-    @Published var pendingContextURLs: [URL] = []
-    @Published var wordDraftReview: WordDraftReview?
-    @Published var isExtractingContext = false
-    @Published var isTargetingContext = false
-    let screenPicker: ScreenContextCapturing?
-
-    private static let rewriteToneKey = "com.novatech.NOVACompanion.rewriteTone"
-    private static let firstRunTipDismissedKey = "com.novatech.NOVACompanion.firstRunTipDismissed"
-
-    init() {
-        if #available(macOS 14.0, *) {
-            screenPicker = ScreenContextPicker()
-        } else {
-            screenPicker = nil
-        }
-        rewriteTone = RewriteTone(rawValue: UserDefaults.standard.string(forKey: Self.rewriteToneKey) ?? "") ?? .natural
-        showFirstRunTip = !UserDefaults.standard.bool(forKey: Self.firstRunTipDismissedKey)
-    }
-
-    func dismissFirstRunTip() {
-        guard showFirstRunTip else { return }
-        showFirstRunTip = false
-        UserDefaults.standard.set(true, forKey: Self.firstRunTipDismissedKey)
-    }
-}
-
-private struct ChatHistoryPopover: View {
-    @ObservedObject var model: NovaChatModel
-    @Binding var searchText: String
-    let onSelect: (ChatThread) -> Void
-    let onRename: (ChatThread) -> Void
-    let onDelete: (ChatThread) -> Void
-
-    private var matchingThreads: [ChatThread] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return model.threads }
-        return model.threads.filter { thread in
-            thread.title.localizedCaseInsensitiveContains(query)
-                || thread.messages.contains { message in
-                    (message.displayContent ?? message.content).localizedCaseInsensitiveContains(query)
-                }
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Chat history")
-                        .font(.system(size: 15, weight: .semibold))
-                    Text("Search saved conversations on this Mac")
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 8)
-                Button {
-                    model.newChat()
-                    onSelect(model.currentThread)
-                } label: {
-                    Label("New", systemImage: "plus")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Start a new chat")
-            }
-
-            HStack(spacing: 7) {
-                Image(systemName: "magnifyingglass")
+        let fileProviders = providers.filter { $0.has…5175 tokens truncated…  Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                 TextField("Search titles and messages", text: $searchText)
                     .textFieldStyle(.plain)

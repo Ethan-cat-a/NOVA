@@ -34,7 +34,8 @@ async function authenticatedUser(token) {
   });
   if (!response.ok) return null;
   const user = await response.json();
-  if (!user.email || !user.email_confirmed_at) return null;
+  if (!user.id) return null;
+  if (user.is_anonymous !== true && (!user.email || !user.email_confirmed_at)) return null;
   return user;
 }
 
@@ -82,11 +83,11 @@ module.exports = async function handler(req, res) {
 
   const authorization = req.headers.authorization || "";
   const match = /^Bearer\s+([A-Za-z0-9._~-]+)$/i.exec(authorization);
-  if (!match) return sendJSON(res, 401, { error: "Sign in with a verified NOVA Copilot account to chat." });
+  if (!match) return sendJSON(res, 401, { error: "Continue as a guest or sign in to chat." });
 
   try {
     const user = await authenticatedUser(match[1]);
-    if (!user) return sendJSON(res, 401, { error: "Your session is invalid or your email is not verified. Sign in again." });
+    if (!user) return sendJSON(res, 401, { error: "Your session is invalid or your email is not verified. Continue as a guest or sign in again." });
 
     const payload = await readJSON(req);
     const validationError = validateMessages(payload);
@@ -115,7 +116,7 @@ module.exports = async function handler(req, res) {
         res.setHeader("Retry-After", String(retryAfter));
         return sendJSON(res, 429, { error: `You’re sending messages too quickly. Try again in ${retryAfter} seconds.` });
       }
-      return sendJSON(res, 401, { error: "This account cannot start a chat. Sign in again." });
+      return sendJSON(res, 401, { error: "This profile cannot start a chat. Continue as a guest or sign in again." });
     }
 
     const controller = new AbortController();

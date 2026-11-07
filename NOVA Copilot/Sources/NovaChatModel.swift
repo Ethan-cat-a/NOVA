@@ -393,11 +393,6 @@ final class NovaChatModel: ObservableObject {
     }
 
     private func requireAccount() -> Bool {
-        guard NovaAccountStore.shared.hasSession else {
-            showsAccountSheet = true
-            connectionStatus = "Sign in to use NOVA"
-            return false
-        }
         return true
     }
 

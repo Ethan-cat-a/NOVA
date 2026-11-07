@@ -8,7 +8,8 @@ struct NovaAuthSession: Codable {
     let accessToken: String
     let refreshToken: String
     let expiresAt: Date
-    let email: String
+    let email: String?
+    let isAnonymous: Bool?
 }
 
 @MainActor
@@ -18,6 +19,7 @@ final class NovaAccountStore: ObservableObject {
     @Published private(set) var session: NovaAuthSession?
     @Published private(set) var isWorking = false
     @Published private(set) var isGoogleSignInInProgress = false
+    @Published private(set) var isOwner = false
     @Published private(set) var statusMessage: String?
 
     private let supabaseURL = URL(string: "https://nhzpodixkjhynvcwnzok.supabase.co")!
@@ -29,6 +31,7 @@ final class NovaAccountStore: ObservableObject {
 
     var email: String? { session?.email }
     var hasSession: Bool { session != nil }
+    var isGuest: Bool { session?.isAnonymous == true }
     private init() {
         session = loadSession()
     }
@@ -47,6 +50,36 @@ final class NovaAccountStore: ObservableObject {
         }
         accept(tokenResponse, accessToken: accessToken, refreshToken: refreshToken, fallbackEmail: normalizedEmail)
         statusMessage = nil
+    }
+
+    func refreshOwnerStatus() async {
+        guard session != nil else { return }
+        do {
+            let token = try await accessTokenForRequest()
+            let data = try await rpc(path: "/rest/v1/rpc/nova_copilot_owner_status", body: [:], token: token)
+            isOwner = (try? JSONDecoder().decode(Bool.self, from: data)) ?? false
+        } catch {
+            isOwner = false
+        }
+    }
+
+    func redeemOwnerCode(_ code: String) async throws {
+        let cleaned = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleaned.count >= 20 else {
+            throw NovaAccountError.message("Enter the full owner access code.")
+        }
+        let token = try await accessTokenForRequest()
+        let data = try await rpc(
+            path: "/rest/v1/rpc/nova_copilot_redeem_owner_code",
+            body: ["p_code": cleaned],
+            token: token
+        )
+        let result = try JSONDecoder().decode(OwnerCodeResponse.self, from: data)
+        guard result.isOwner == true else {
+            throw NovaAccountError.message("That owner code is invalid or has already been claimed.")
+        }
+        isOwner = true
+        statusMessage = "Owner profile activated. Your messages are unlimited."
     }
 
     func beginGoogleSignIn() throws {
@@ -131,9 +164,7 @@ final class NovaAccountStore: ObservableObject {
     }
 
     func accessTokenForRequest() async throws -> String {
-        guard let current = session else {
-            throw NovaAccountError.message("Sign in with a verified account before sending a message.")
-        }
+        guard let current = session else { return try await signInAnonymously() }
         if current.expiresAt.timeIntervalSinceNow > 60 { return current.accessToken }
 
         do {
@@ -149,8 +180,21 @@ final class NovaAccountStore: ObservableObject {
             return accessToken
         } catch {
             clearSession()
+            if current.isAnonymous == true { return try await signInAnonymously() }
             throw NovaAccountError.message("Your session expired. Please sign in again.")
         }
+    }
+
+    private func signInAnonymously() async throws -> String {
+        let result = try await request(path: "/auth/v1/signup", body: ["data": [String: String]()])
+        let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: result.data)
+        guard let accessToken = tokenResponse.accessToken,
+              let refreshToken = tokenResponse.refreshToken else {
+            throw NovaAccountError.message("NOVA couldn’t start a guest profile. Try again or sign in.")
+        }
+        accept(tokenResponse, accessToken: accessToken, refreshToken: refreshToken, fallbackEmail: nil)
+        statusMessage = nil
+        return accessToken
     }
 
     func signOut() async {
@@ -164,7 +208,7 @@ final class NovaAccountStore: ObservableObject {
         clearSession()
     }
 
-    private func request(path: String, body: [String: String]) async throws -> (data: Data, response: HTTPURLResponse) {
+    private func request(path: String, body: [String: Any]) async throws -> (data: Data, response: HTTPURLResponse) {
         isWorking = true
         defer { isWorking = false }
 
@@ -172,7 +216,7 @@ final class NovaAccountStore: ObservableObject {
         request.httpMethod = "POST"
         request.setValue(publishableKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(body)
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 25
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -186,17 +230,36 @@ final class NovaAccountStore: ObservableObject {
         return (data, httpResponse)
     }
 
-    private func accept(_ response: TokenResponse, accessToken: String, refreshToken: String, fallbackEmail: String) {
+    private func accept(_ response: TokenResponse, accessToken: String, refreshToken: String, fallbackEmail: String?) {
         let expiry = response.expiresAt.map(Date.init(timeIntervalSince1970:))
             ?? Date().addingTimeInterval(TimeInterval(response.expiresIn ?? 3600))
         let newSession = NovaAuthSession(
             accessToken: accessToken,
             refreshToken: refreshToken,
             expiresAt: expiry,
-            email: response.user?.email ?? fallbackEmail
+            email: response.user?.email ?? fallbackEmail,
+            isAnonymous: response.user?.isAnonymous ?? false
         )
         session = newSession
         saveSession(newSession)
+    }
+
+    private func rpc(path: String, body: [String: Any], token: String) async throws -> Data {
+        var request = URLRequest(url: endpoint(path))
+        request.httpMethod = "POST"
+        request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.timeoutInterval = 25
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NovaAccountError.message("The owner profile service returned an invalid response.")
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw NovaAccountError.message("NOVA couldn’t verify that owner code. Try again.")
+        }
+        return data
     }
 
     private func endpoint(_ path: String) -> URL {
@@ -205,6 +268,7 @@ final class NovaAccountStore: ObservableObject {
 
     private func clearSession() {
         session = nil
+        isOwner = false
         statusMessage = nil
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -271,10 +335,20 @@ private struct TokenResponse: Decodable {
 private struct AuthUser: Decodable {
     let email: String?
     let emailConfirmedAt: String?
+    let isAnonymous: Bool?
 
     enum CodingKeys: String, CodingKey {
         case email
         case emailConfirmedAt = "email_confirmed_at"
+        case isAnonymous = "is_anonymous"
+    }
+}
+
+private struct OwnerCodeResponse: Decodable {
+    let isOwner: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case isOwner = "is_owner"
     }
 }
 

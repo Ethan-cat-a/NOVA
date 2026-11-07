@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS" src="https://img.shields.io/badge/macOS-1.5.1-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Source version 1.5.1 signs in to existing accounts with Google or email/password; account creation is not offered in the app.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg"><strong>↓ Download Mac app · 1.5.0 DMG</strong></a></p>
+  <p><img alt="macOS" src="https://img.shields.io/badge/macOS-1.5.2-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Source version 1.5.2 starts a guest profile automatically. Signing in to an existing Google or email/password account is optional.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.2/NOVA-Copilot-1.5.2.dmg"><strong>↓ Download Mac app · 1.5.2 DMG</strong></a></p>
 </div>
 
 ---
@@ -33,11 +33,12 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 - New Word exports format headings, lists, bold, italics and code blocks. Existing page layouts, tables and images are not retained. Word Doc mode supports one Word source and up to four reference files per request.
 - Completed-answer actions appear on hover; Copy remains available to assistive technologies.
 - The panel follows macOS light and dark appearance.
-- Version 1.5.1 source removes self-service account creation. The precreated owner account signs in with its existing Google identity or password; server-side usage limits still apply.
+- Guest and regular profiles receive 25 chat requests per UTC day, enforced by the server. A one-time owner code can activate the private unlimited-use profile.
+- Guest usage is attached to a device profile. Clearing NOVA’s saved app data can create a new profile and allowance.
 
 ## Install
 
-1. [Download the latest published Mac app DMG (1.5.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.0/NOVA-Copilot-1.5.0.dmg). A 1.5.1 installer has not been published yet.
+1. [Download the Mac app DMG (1.5.2)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.2/NOVA-Copilot-1.5.2.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 

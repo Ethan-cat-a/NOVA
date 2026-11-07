@@ -7,6 +7,14 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>NOVA Copilot software updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.2</title>
+      <pubDate>Sat, 07 Nov 2026 04:36:03 GMT</pubDate>
+      <sparkle:version>20</sparkle:version>
+      <sparkle:shortVersionString>1.5.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.2/NOVA-Copilot-1.5.2.zip" length="5062101" type="application/octet-stream" sparkle:edSignature="6b8gHJAwCFlUj3gUEXRREpX6wEWIwoYPaV/1XZu9nR/HBsf3seZQfY5OucY71HiyvjGjyJ7K2puG1/IeYnU+BA=="></enclosure>
+    </item>
+    <item>
       <title>Version 1.5.1</title>
       <pubDate>Fri, 06 Nov 2026 12:11:41 GMT</pubDate>
       <sparkle:version>19</sparkle:version>
@@ -16,6 +24,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: Gc66rviHvX3vkamlcCIdOacbyErgdEROqFRn9WHZFKsfWWRFXhFnyRk2IQOtUHBg4Lde+7/kMZah/wGEXUbPAw==
-length: 1162
+edSignature: /GMirVn+HTls8927ETR6X5wzW3d+iGGBUHIAbNq8a8Ac3MaZaQjxqMwIre0mN+YOsTau8lAxrFLgCgotVg85CA==
+length: 1740
 -->

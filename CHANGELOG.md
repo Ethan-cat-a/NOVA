@@ -1,3 +1,11 @@
+# NOVA Copilot Version 1.5.2 (2026-11-07)
+
+- Makes account sign-in optional. Chat starts a Supabase guest profile automatically; existing Google and email/password sign-in remain available.
+- Enforces 25 chat requests per UTC day and 10 per minute for guest and regular profiles. The owner profile keeps unlimited daily use with a 30-per-minute cap.
+- Adds a one-time owner access code that attaches unlimited owner status to the current NOVA profile without placing the code in the public app source.
+- Bumps the Mac build number to 20 and both clients to version 1.5.2.
+- Guest allowances are associated with a device profile. Clearing saved app data can create a new profile and a new allowance.
+
 # NOVA Copilot Version 1.5.1 (2026-11-06)
 
 - Removes self-service email/password account creation from the Mac and Windows clients. Email/password remains available for existing accounts.
