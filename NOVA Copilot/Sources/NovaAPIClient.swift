@@ -1,4 +1,39 @@
 import Foundation
+import OSLog
+
+enum NovaNetworkSession {
+    private static let metricsDelegate = NovaNetworkMetricsDelegate()
+
+    /// Keep one URLSession and its per-host connection pool alive for the life of the app.
+    /// Limiting fan-out avoids unnecessary sockets while leaving room for a health check
+    /// and a chat request to overlap; HTTP/2 can multiplex them on the same connection.
+    static let shared: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpMaximumConnectionsPerHost = 2
+        return URLSession(configuration: configuration, delegate: metricsDelegate, delegateQueue: nil)
+    }()
+}
+
+private final class NovaNetworkMetricsDelegate: NSObject, URLSessionTaskDelegate {
+    private let logger = Logger(subsystem: "com.novatechnologies.novacopilot", category: "Network")
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+        guard let transaction = metrics.transactionMetrics.last else { return }
+        let tlsMilliseconds = Self.milliseconds(from: transaction.secureConnectionStartDate, to: transaction.secureConnectionEndDate)
+        let dnsMilliseconds = Self.milliseconds(from: transaction.domainLookupStartDate, to: transaction.domainLookupEndDate)
+        let tcpMilliseconds = Self.milliseconds(from: transaction.connectStartDate, to: transaction.connectEndDate)
+        let responseMilliseconds = Self.milliseconds(from: transaction.fetchStartDate, to: transaction.responseStartDate)
+        let tls = tlsMilliseconds.map(String.init) ?? (transaction.isReusedConnection ? "reused" : "n/a")
+        let path = task.currentRequest?.url?.path ?? "/"
+
+        logger.info("request path=\(path, privacy: .public) protocol=\(transaction.networkProtocolName ?? "unknown", privacy: .public) reused=\(transaction.isReusedConnection, privacy: .public) dns_ms=\(dnsMilliseconds ?? -1, privacy: .public) tcp_ms=\(tcpMilliseconds ?? -1, privacy: .public) tls_ms=\(tls, privacy: .public) first_byte_ms=\(responseMilliseconds ?? -1, privacy: .public)")
+    }
+
+    private static func milliseconds(from start: Date?, to end: Date?) -> Int? {
+        guard let start, let end else { return nil }
+        return max(0, Int((end.timeIntervalSince(start) * 1_000).rounded()))
+    }
+}
 
 @MainActor
 final class NovaAPIClient {
@@ -13,7 +48,7 @@ final class NovaAPIClient {
         request.httpMethod = "GET"
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 12
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NovaNetworkSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw NovaAPIError.invalidResponse
         }
@@ -35,7 +70,7 @@ final class NovaAPIClient {
         request.timeoutInterval = 180
         request.httpBody = try JSONEncoder().encode(NovaChatRequest(messages: messages))
 
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        let (bytes, response) = try await NovaNetworkSession.shared.bytes(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw NovaAPIError.invalidResponse
         }

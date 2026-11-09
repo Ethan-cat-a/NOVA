@@ -203,7 +203,7 @@ final class NovaAccountStore: ObservableObject {
             request.httpMethod = "POST"
             request.setValue(publishableKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-            _ = try? await URLSession.shared.data(for: request)
+            _ = try? await NovaNetworkSession.shared.data(for: request)
         }
         clearSession()
     }
@@ -219,7 +219,7 @@ final class NovaAccountStore: ObservableObject {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 25
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NovaNetworkSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NovaAccountError.message("The sign-in service returned an invalid response.")
         }
@@ -252,7 +252,7 @@ final class NovaAccountStore: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 25
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NovaNetworkSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NovaAccountError.message("The owner profile service returned an invalid response.")
         }

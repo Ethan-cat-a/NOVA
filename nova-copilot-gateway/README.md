@@ -4,6 +4,8 @@ Private server-side gateway for NOVA Copilot chat. It validates Supabase session
 
 In Vercel, set the project Root Directory to `nova-copilot-gateway` so `api/chat.js` is exposed at `/api/chat`.
 
+The gateway uses one module-scoped HTTPS agent to reuse keep-alive sockets and cached TLS sessions for each origin while a function instance is warm. Fluid Compute is enabled in `vercel.json` to improve instance reuse. `Server-Timing` reports auth, quota and upstream-to-response-header durations; an idle or recycled instance may still need a new TCP/TLS connection.
+
 Required Vercel environment variables:
 
 - `SUPABASE_URL`

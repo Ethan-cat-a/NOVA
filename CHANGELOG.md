@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.5.5 (2026-11-09)
+
+- Reuses one long-lived URLSession connection pool for Mac chat and Supabase account traffic, and records privacy-safe DNS, TCP, TLS and first-byte timings.
+- Keeps HTTPS sockets and TLS sessions pooled for Supabase and the NOVA V8 upstream on warm gateway instances; enables Vercel Fluid Compute and reports gateway stage timings.
+- Bumps the Mac marketing version to 1.5.5 and build number to 22.
+
 # NOVA Copilot for macOS Version 1.5.4 (2026-11-07)
 
 - Fixes owner-code entry with a visible **Paste** button that reads clipboard text directly while keeping the code masked.

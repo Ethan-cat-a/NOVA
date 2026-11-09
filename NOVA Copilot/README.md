@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.5.4-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.5.4 starts a guest profile automatically. Signing in to an existing Google or email/password account is optional.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.4/NOVA-Copilot-1.5.4.dmg"><strong>↓ Download Mac app · 1.5.4 DMG</strong></a></p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.5.5-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Version 1.5.5 reuses HTTPS connections for chat and account requests and shows timing details when a connection is slow.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.5/NOVA-Copilot-1.5.5.dmg"><strong>↓ Download Mac app · 1.5.5 DMG</strong></a></p>
 </div>
 
 ---
@@ -38,7 +38,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the Mac app DMG (1.5.4)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.4/NOVA-Copilot-1.5.4.dmg).
+1. [Download the Mac app DMG (1.5.5)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.5/NOVA-Copilot-1.5.5.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 

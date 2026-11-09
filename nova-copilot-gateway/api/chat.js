@@ -1,7 +1,84 @@
+const https = require("node:https");
+const { performance } = require("node:perf_hooks");
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 const UPSTREAM_CHAT_URL = process.env.UPSTREAM_CHAT_URL;
 const VERCEL_AUTOMATION_BYPASS_SECRET = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+
+// Module-scoped so warm Vercel instances reuse HTTPS sockets and cached TLS
+// sessions for Supabase and the NOVA V8 upstream across requests.
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 1_000,
+  maxSockets: 8,
+  maxFreeSockets: 4,
+  maxTotalSockets: 16,
+  maxCachedSessions: 100,
+  scheduling: "lifo",
+});
+const connectionReuse = new WeakMap();
+
+function requestHTTPS(url, options = {}) {
+  let target;
+  try {
+    target = new URL(url);
+    if (target.protocol !== "https:") throw new Error("NOVA backend URLs must use HTTPS.");
+  } catch (error) {
+    return Promise.reject(error);
+  }
+
+  return new Promise((resolve, reject) => {
+    const headers = { ...options.headers };
+    if (options.body !== undefined && !Object.keys(headers).some((name) => name.toLowerCase() === "content-length")) {
+      headers["Content-Length"] = Buffer.byteLength(options.body);
+    }
+    const request = https.request(target, {
+      method: options.method || "GET",
+      headers,
+      agent: httpsAgent,
+      signal: options.signal,
+    }, (response) => {
+      connectionReuse.set(response, {
+        socketReused: request.reusedSocket === true,
+        tlsSessionReused: typeof response.socket?.isSessionReused === "function" && response.socket.isSessionReused(),
+      });
+      resolve(response);
+    });
+    request.once("error", reject);
+    if (options.body !== undefined) request.write(options.body);
+    request.end();
+  });
+}
+
+async function readResponseText(response) {
+  const chunks = [];
+  for await (const chunk of response) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function setServerTiming(res, timings) {
+  const value = Object.entries(timings)
+    .filter(([, metric]) => Number.isFinite(typeof metric === "number" ? metric : metric?.duration))
+    .map(([name, metric]) => {
+      const duration = typeof metric === "number" ? metric : metric.duration;
+      const connection = typeof metric === "number"
+        ? ""
+        : metric.socketReused
+          ? ';desc="socket reused"'
+          : metric.tlsSessionReused
+            ? ';desc="TLS session resumed"'
+            : ';desc="new connection"';
+      return `${name};dur=${Math.max(0, duration).toFixed(1)}${connection}`;
+    })
+    .join(", ");
+  if (value) res.setHeader("Server-Timing", value);
+}
+
+function responseHeader(response, name) {
+  const value = response.headers[name.toLowerCase()];
+  return Array.isArray(value) ? value.join(", ") : value;
+}
 
 function sendJSON(res, status, body) {
   res.statusCode = status;
@@ -26,17 +103,21 @@ async function readJSON(req, maxBytes = 1024 * 1024) {
 }
 
 async function authenticatedUser(token) {
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+  const response = await requestHTTPS(`${SUPABASE_URL}/auth/v1/user`, {
     headers: {
       apikey: SUPABASE_PUBLISHABLE_KEY,
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!response.ok) return null;
-  const user = await response.json();
-  if (!user.id) return null;
-  if (user.is_anonymous !== true && (!user.email || !user.email_confirmed_at)) return null;
-  return user;
+  const body = await readResponseText(response);
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    return { user: null, connection: connectionReuse.get(response) };
+  }
+  const user = JSON.parse(body);
+  if (!user.id || (user.is_anonymous !== true && (!user.email || !user.email_confirmed_at))) {
+    return { user: null, connection: connectionReuse.get(response) };
+  }
+  return { user, connection: connectionReuse.get(response) };
 }
 
 function validateMessages(payload) {
@@ -62,15 +143,22 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const upstream = await fetch(UPSTREAM_CHAT_URL, {
+      const startedAt = performance.now();
+      const upstream = await requestHTTPS(UPSTREAM_CHAT_URL, {
         headers: {
           Accept: "application/json",
           "x-vercel-protection-bypass": VERCEL_AUTOMATION_BYPASS_SECRET,
         },
       });
-      const text = await upstream.text();
-      res.statusCode = upstream.status;
-      res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json; charset=utf-8");
+      setServerTiming(res, {
+        upstream_headers: {
+          duration: performance.now() - startedAt,
+          ...connectionReuse.get(upstream),
+        },
+      });
+      const text = await readResponseText(upstream);
+      res.statusCode = upstream.statusCode || 502;
+      res.setHeader("Content-Type", responseHeader(upstream, "content-type") || "application/json; charset=utf-8");
       return res.end(text);
     } catch {
       return sendJSON(res, 502, { ok: false, error: "NOVA V8 is unavailable." });
@@ -86,14 +174,19 @@ module.exports = async function handler(req, res) {
   if (!match) return sendJSON(res, 401, { error: "Continue as a guest or sign in to chat." });
 
   try {
-    const user = await authenticatedUser(match[1]);
+    const timings = {};
+    let stageStartedAt = performance.now();
+    const authResult = await authenticatedUser(match[1]);
+    const user = authResult.user;
+    timings.auth = { duration: performance.now() - stageStartedAt, ...authResult.connection };
     if (!user) return sendJSON(res, 401, { error: "Your session is invalid or your email is not verified. Continue as a guest or sign in again." });
 
     const payload = await readJSON(req);
     const validationError = validateMessages(payload);
     if (validationError) return sendJSON(res, 400, { error: validationError });
 
-    const quotaResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/nova_copilot_authorize_chat`, {
+    stageStartedAt = performance.now();
+    const quotaResponse = await requestHTTPS(`${SUPABASE_URL}/rest/v1/rpc/nova_copilot_authorize_chat`, {
       method: "POST",
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -102,11 +195,16 @@ module.exports = async function handler(req, res) {
       },
       body: "{}",
     });
-    if (!quotaResponse.ok) {
-      console.error("NOVA Copilot quota check failed", quotaResponse.status);
+    const quotaBody = await readResponseText(quotaResponse);
+    timings.quota = {
+      duration: performance.now() - stageStartedAt,
+      ...connectionReuse.get(quotaResponse),
+    };
+    if (quotaResponse.statusCode < 200 || quotaResponse.statusCode >= 300) {
+      console.error("NOVA Copilot quota check failed", quotaResponse.statusCode);
       return sendJSON(res, 503, { error: "Usage limits could not be checked. Please try again shortly." });
     }
-    const quota = await quotaResponse.json();
+    const quota = JSON.parse(quotaBody);
     if (!quota || quota.allowed !== true) {
       if (quota && quota.reason === "daily_limit") {
         return sendJSON(res, 429, { error: "You’ve reached today’s 25-message limit. Try again after the daily reset." });
@@ -123,7 +221,8 @@ module.exports = async function handler(req, res) {
     const timeout = setTimeout(() => controller.abort(), 180_000);
     let upstream;
     try {
-      upstream = await fetch(UPSTREAM_CHAT_URL, {
+      stageStartedAt = performance.now();
+      upstream = await requestHTTPS(UPSTREAM_CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -133,21 +232,22 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
-      res.statusCode = upstream.status;
-      res.setHeader("Content-Type", upstream.headers.get("content-type") || "text/plain; charset=utf-8");
+      timings.upstream_headers = {
+        duration: performance.now() - stageStartedAt,
+        ...connectionReuse.get(upstream),
+      };
+      setServerTiming(res, timings);
+      res.statusCode = upstream.statusCode || 502;
+      res.setHeader("Content-Type", responseHeader(upstream, "content-type") || "text/plain; charset=utf-8");
       res.setHeader("X-NOVA-Plan", quota.is_owner ? "owner-unlimited" : "daily-limit");
       if (Number.isFinite(Number(quota.remaining))) res.setHeader("X-NOVA-Remaining", String(quota.remaining));
-      if (upstream.body) {
-        for await (const chunk of upstream.body) {
-          if (!res.write(chunk)) await new Promise((resolve) => res.once("drain", resolve));
-        }
+      for await (const chunk of upstream) {
+        if (!res.write(chunk)) await new Promise((resolve) => res.once("drain", resolve));
       }
       return res.end();
     } finally {
       clearTimeout(timeout);
-      if (upstream && upstream.body && !upstream.body.locked) {
-        try { await upstream.body.cancel(); } catch {}
-      }
+      if (upstream && !upstream.complete) upstream.destroy();
     }
   } catch (error) {
     if (res.headersSent) return res.end();
