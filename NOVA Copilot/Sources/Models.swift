@@ -114,7 +114,19 @@ struct ChatMessage: Codable, Identifiable {
     var content: String
     var displayContent: String? = nil
     var isWordDocumentDraft: Bool? = nil
+    var sourceDetails: [ChatSource]? = nil
     var createdAt: Date = Date()
+}
+
+struct ChatSource: Codable, Identifiable {
+    var id: UUID = UUID()
+    var name: String
+    var details: String
+
+    init(name: String, details: String) {
+        self.name = name
+        self.details = details
+    }
 }
 
 struct ChatThread: Codable, Identifiable {

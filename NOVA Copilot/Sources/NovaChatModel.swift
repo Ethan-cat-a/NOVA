@@ -27,6 +27,7 @@ final class NovaChatModel: ObservableObject {
         let prompt: String
         let mode: NovaMode
         let isolateWordSource: Bool
+        let sourceDetails: [ChatSource]?
     }
 
     var canRetryLastRequest: Bool {
@@ -247,8 +248,40 @@ final class NovaChatModel: ObservableObject {
             threadID: activeThreadID,
             existingUserMessageID: nil,
             displayContent: displayContent,
-            isolateWordSource: isolateWordSource
+            isolateWordSource: isolateWordSource,
+            sourceDetails: contextAttachments.isEmpty ? nil : contextAttachments.map(makeChatSource)
         )
+    }
+
+    private func makeChatSource(from attachment: ContextAttachment) -> ChatSource {
+        let detail: String
+        switch attachment.kind {
+        case .pdf:
+            let pages = attachment.extractedText
+                .split(whereSeparator: { $0.isNewline })
+                .compactMap { line -> Int? in
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    guard trimmed.hasPrefix("Page ") else { return nil }
+                    return Int(trimmed.dropFirst("Page ".count))
+                }
+            let uniquePages = Array(Set(pages)).sorted()
+            if uniquePages.isEmpty {
+                detail = "PDF · text extracted on this Mac"
+            } else {
+                let pageLabel = uniquePages.count == 1 ? "page" : "pages"
+                detail = "PDF · \(pageLabel) " + uniquePages.map(String.init).joined(separator: ", ")
+            }
+        case .word:
+            detail = "Word document · text extracted on this Mac"
+        case .image:
+            detail = "Image · text recognized on this Mac"
+        case .screenshot:
+            detail = "Screenshot · text recognized on this Mac"
+        }
+        let safeName = attachment.name
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+        return ChatSource(name: safeName, details: detail)
     }
 
     func retryLastRequest() {
@@ -266,6 +299,7 @@ final class NovaChatModel: ObservableObject {
             displayContent: nil,
             responseMode: failedRequest.mode,
             isolateWordSource: failedRequest.isolateWordSource,
+            sourceDetails: failedRequest.sourceDetails,
             existingResponseMessageID: failedRequest.responseMessageID,
             preservedDraft: preservedDraft
         )
@@ -284,6 +318,7 @@ final class NovaChatModel: ObservableObject {
             displayContent: nil,
             responseMode: request.mode,
             isolateWordSource: request.isolateWordSource,
+            sourceDetails: request.sourceDetails,
             existingResponseMessageID: request.responseMessageID,
             preservedDraft: preservedDraft
         )
@@ -296,6 +331,7 @@ final class NovaChatModel: ObservableObject {
         displayContent: String? = nil,
         responseMode: NovaMode? = nil,
         isolateWordSource: Bool = false,
+        sourceDetails: [ChatSource]? = nil,
         existingResponseMessageID: UUID? = nil,
         preservedDraft: String? = nil
     ) {
@@ -325,10 +361,11 @@ final class NovaChatModel: ObservableObject {
             updateMessage(responseID, threadID: threadID) { message in
                 message.content = ""
                 message.isWordDocumentDraft = nil
+                message.sourceDetails = sourceDetails
             }
         } else {
             responseID = UUID()
-            appendMessage(ChatMessage(id: responseID, role: .assistant, content: ""), to: threadID)
+            appendMessage(ChatMessage(id: responseID, role: .assistant, content: "", sourceDetails: sourceDetails), to: threadID)
         }
         let retryableRequest = RetryableRequest(
             threadID: threadID,
@@ -336,7 +373,8 @@ final class NovaChatModel: ObservableObject {
             responseMessageID: responseID,
             prompt: prompt,
             mode: requestMode,
-            isolateWordSource: isolateWordSource
+            isolateWordSource: isolateWordSource,
+            sourceDetails: sourceDetails
         )
         discardRetryableRequests(in: threadID)
         retryableRequests[responseID] = retryableRequest
@@ -348,9 +386,12 @@ final class NovaChatModel: ObservableObject {
         let generalAnswerInstruction = requestMode == .wordDocument
             ? ""
             : " For normal answers, be concise and start with the direct answer. Avoid filler and unnecessary preambles. Use Markdown when it improves readability: headings for longer answers, bullets or numbered steps for lists, and fenced code blocks for code. Keep short answers as plain prose."
+        let sourceCitationInstruction = sourceDetails?.isEmpty == false && requestMode != .wordDocument
+            ? " When an answer relies on an attached file, cite its exact filename and, for PDFs, the page number shown in the supplied text. Do not invent page numbers or cite outside sources. Keep citations brief."
+            : ""
         var apiMessages = [NovaAPIMessage(
             role: "assistant",
-            content: "Active response mode (\(requestMode.rawValue)): \(requestMode.instruction) Canonical Nova lore: Nova was created at Nova AI headquarters by Ethan. If asked where Nova was created, state that Nova was created at Nova AI headquarters.\(generalAnswerInstruction)"
+            content: "Active response mode (\(requestMode.rawValue)): \(requestMode.instruction) Canonical Nova lore: Nova was created at Nova AI headquarters by Ethan. If asked where Nova was created, state that Nova was created at Nova AI headquarters.\(generalAnswerInstruction)\(sourceCitationInstruction)"
         )]
         if isolateWordSource {
             apiMessages.append(NovaAPIMessage(role: "user", content: prompt))

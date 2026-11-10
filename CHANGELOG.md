@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.5.6 (2026-11-10)
+
+- Adds a collapsed source-details disclosure under replies to requests with attached files, showing their exact filenames and PDF pages included in the extracted text.
+- Asks NOVA to cite only filenames and PDF page labels present in the supplied material; it does not invent external citations.
+- Bumps the Mac marketing version to 1.5.6 and build number to 23.
+
 # NOVA Copilot for macOS Version 1.5.5 (2026-11-09)
 
 - Reuses one long-lived URLSession connection pool for Mac chat and Supabase account traffic, and records privacy-safe DNS, TCP, TLS and first-byte timings.

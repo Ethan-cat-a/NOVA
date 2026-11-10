@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.5.5-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.5.5 reuses HTTPS connections for chat and account requests and shows timing details when a connection is slow.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.5/NOVA-Copilot-1.5.5.dmg"><strong>↓ Download Mac app · 1.5.5 DMG</strong></a></p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.5.6-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Version 1.5.6 adds compact source details for answers based on attached files.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.6/NOVA-Copilot-1.5.6.dmg"><strong>↓ Download Mac app · 1.5.6 DMG</strong></a></p>
 </div>
 
 ---
@@ -27,6 +27,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 - Completed answers format headings, lists, quotes and code blocks; hover over a code block to copy it.
 - Optional Launch at Login and Keep on Top.
 - Text extraction for up to five context items total—images, PDFs, Word documents or screen captures—runs locally. Review each item before sending; NOVA receives only the text you approve, not the original files.
+- Completed replies to file-based questions can show a collapsed source-details row with the supplied filenames and PDF pages; NOVA is asked to cite only details present in the extracted text.
 - Screen and window capture uses the macOS 14+ system picker; image and PDF import works on macOS 13+.
 - Import `.docx` or `.doc` files for text context. Choose **Word Doc** mode to create a document or fill an imported one, then review, edit and save the result as `.docx`.
 - When adding a new document in Word Doc mode, include the details to fill in your current message; earlier chat drafts are not included.
@@ -38,7 +39,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the Mac app DMG (1.5.5)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.5/NOVA-Copilot-1.5.5.dmg).
+1. [Download the Mac app DMG (1.5.6)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.6/NOVA-Copilot-1.5.6.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 

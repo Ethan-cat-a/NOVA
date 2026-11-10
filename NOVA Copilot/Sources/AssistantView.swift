@@ -1584,6 +1584,7 @@ private struct MessageBubble: View {
     let onRetry: () -> Void
     let onSaveWord: () -> Void
     @State private var isHovered = false
+    @State private var areSourceDetailsExpanded = false
 
     private var isUser: Bool { message.role == .user }
 
@@ -1625,6 +1626,32 @@ private struct MessageBubble: View {
                         .accessibilityAction(named: Text("Copy response")) {
                             if !isUser { onCopy() }
                         }
+                }
+                if !isUser, !isStreaming, let sources = message.sourceDetails, !sources.isEmpty {
+                    DisclosureGroup(isExpanded: $areSourceDetailsExpanded) {
+                        VStack(alignment: .leading, spacing: 7) {
+                            Text("Files provided with this request")
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.secondary)
+                            ForEach(sources) { source in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(source.name)
+                                        .font(.system(size: 10, weight: .medium))
+                                        .lineLimit(2)
+                                    Text(source.details)
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(Color.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .padding(.top, 5)
+                    } label: {
+                        Label("Source details · \(sources.count)", systemImage: "doc.text.magnifyingglass")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .padding(.top, 4)
                 }
                 if !isUser && isStreaming && !message.content.isEmpty {
                     HStack(spacing: 5) {
