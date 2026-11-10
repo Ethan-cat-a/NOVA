@@ -17,6 +17,7 @@ struct AssistantView: View {
     @State private var conversationContentBottomY: CGFloat = .infinity
     @State private var showsUpdateNotes = false
     @State private var showsChatHistory = false
+    @State private var showsDocumentLibrary = false
     @State private var historySearchText = ""
     @State private var renameRequest: ChatThread?
     @State private var renameTitle = ""
@@ -24,6 +25,7 @@ struct AssistantView: View {
     @State private var showsAccountSheet = false
     @StateObject private var viewState = AssistantViewState()
     @StateObject private var accountStore = NovaAccountStore.shared
+    @StateObject private var documentLibrary = DocumentLibraryStore.shared
 
     private let accent = Color(red: 0.15, green: 0.34, blue: 0.77)
     private let ink = Color.primary
@@ -79,7 +81,7 @@ struct AssistantView: View {
         .onExitCommand(perform: onHide)
         .fileImporter(
             isPresented: $viewState.showsContextImporter,
-            allowedContentTypes: [.image, .pdf] + WordDocument.importTypes,
+            allowedContentTypes: [.image, .pdf, .plainText, .rtf, UTType(filenameExtension: "md") ?? .plainText] + WordDocument.importTypes,
             allowsMultipleSelection: true,
             onCompletion: handleContextImport
         )
@@ -99,6 +101,9 @@ struct AssistantView: View {
         }
         .onChange(of: model.currentThread.messages.count) { count in
             if count > 0 { viewState.dismissFirstRunTip() }
+        }
+        .onChange(of: model.activeThreadID) { _ in
+            viewState.useDocumentLibrary = false
         }
         .onChange(of: viewState.contextReview?.id) { id in
             if id == nil { processNextContextFile() }
@@ -152,6 +157,9 @@ struct AssistantView: View {
         }
         .sheet(item: $viewState.wordDraftReview) { draft in
             WordDocumentEditor(draft: draft)
+        }
+        .sheet(isPresented: $showsDocumentLibrary) {
+            DocumentLibraryManagerSheet(store: documentLibrary)
         }
     }
 
@@ -777,8 +785,29 @@ struct AssistantView: View {
             showFeedback("This document is too long to fill safely. Try a shorter document or ask about it in another mode.", isError: true)
             return
         }
-        model.send(contextAttachments: attachments)
-        if !attachments.isEmpty { viewState.contextAttachments = [] }
+        guard viewState.useDocumentLibrary else {
+            model.send(contextAttachments: attachments)
+            if !attachments.isEmpty { viewState.contextAttachments = [] }
+            return
+        }
+
+        guard !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            showFeedback("Add a question so NOVA knows what to find in your documents.", isError: true)
+            return
+        }
+
+        viewState.isSearchingDocumentLibrary = true
+        Task { @MainActor in
+            do {
+                let matches = try await documentLibrary.retrieveRelevantDocuments(for: model.input)
+                model.send(contextAttachments: attachments, libraryAttachments: matches)
+                viewState.contextAttachments = []
+                viewState.useDocumentLibrary = false
+            } catch {
+                showFeedback(error.localizedDescription, isError: true)
+            }
+            viewState.isSearchingDocumentLibrary = false
+        }
     }
 
     private func copyResponse(_ content: String) {
@@ -876,9 +905,41 @@ struct AssistantView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 Menu {
                     Button {
+                        if documentLibrary.folders.isEmpty {
+                            showsDocumentLibrary = true
+                        } else {
+                            viewState.useDocumentLibrary.toggle()
+                        }
+                    } label: {
+                        Label(
+                            viewState.useDocumentLibrary ? "Turn off for this message" : "Use My Documents for next message",
+                            systemImage: viewState.useDocumentLibrary ? "checkmark.circle.fill" : "books.vertical"
+                        )
+                    }
+                    Divider()
+                    Button { showsDocumentLibrary = true } label: {
+                        Label("Manage document folders…", systemImage: "folder.badge.gearshape")
+                    }
+                } label: {
+                    Image(systemName: "books.vertical")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(viewState.useDocumentLibrary ? accent : muted)
+                        .frame(width: 32, height: 38)
+                        .background(
+                            viewState.useDocumentLibrary ? accent.opacity(0.10) : Color(nsColor: .controlBackgroundColor),
+                            in: RoundedRectangle(cornerRadius: 10)
+                        )
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(viewState.useDocumentLibrary ? accent.opacity(0.35) : Color(nsColor: .separatorColor), lineWidth: 1))
+                }
+                .menuStyle(.borderlessButton)
+                .accessibilityLabel(viewState.useDocumentLibrary ? "My Documents enabled for next message" : "Use My Documents for next message")
+                .help(viewState.useDocumentLibrary ? "My Documents will be searched for this next message" : "Search your chosen document folders for this next message")
+
+                Menu {
+                    Button {
                         viewState.showsContextImporter = true
                     } label: {
-                        Label("Add image, PDF or Word document…", systemImage: "doc.badge.plus")
+                        Label("Add image or document…", systemImage: "doc.badge.plus")
                     }
                     if #available(macOS 14.0, *) {
                         Button(action: captureScreenContext) {
@@ -926,6 +987,7 @@ struct AssistantView: View {
                     .font(.system(size: 13))
                     .lineLimit(1...5)
                     .focused($inputFocused)
+                    .disabled(viewState.isSearchingDocumentLibrary)
                     .onSubmit { sendMessage() }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
@@ -950,8 +1012,8 @@ struct AssistantView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return, modifiers: .command)
-                .disabled(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty)
-                .opacity(!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty ? 0.55 : 1)
+                .disabled(viewState.isSearchingDocumentLibrary || (!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty))
+                .opacity(!model.isSending && !viewState.isSearchingDocumentLibrary && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty ? 0.55 : 1)
                 .accessibilityLabel(model.isSending ? "Stop response" : "Send message")
                 .help(model.isSending ? "Stop response" : (model.currentMode == .wordDocument ? "Create or fill a Word document (⌘Return)" : "Send message (⌘Return)"))
             }
@@ -959,6 +1021,15 @@ struct AssistantView: View {
                 HStack(spacing: 7) {
                     ProgressView().controlSize(.small).scaleEffect(0.75)
                     Text("Reading text on this Mac…")
+                    Spacer(minLength: 0)
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(muted)
+            }
+            if viewState.isSearchingDocumentLibrary {
+                HStack(spacing: 7) {
+                    ProgressView().controlSize(.small).scaleEffect(0.75)
+                    Text("Searching your document folders on this Mac…")
                     Spacer(minLength: 0)
                 }
                 .font(.system(size: 10, weight: .medium))
@@ -985,7 +1056,7 @@ struct AssistantView: View {
                 .foregroundStyle(muted)
             }
             if viewState.isTargetingContext {
-                Text("Drop up to 5 images, PDFs or Word documents to review their text")
+                    Text("Drop up to 5 images or supported documents to review their text")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(accent)
                     .frame(maxWidth: .infinity)
@@ -1029,6 +1100,8 @@ private final class AssistantViewState: ObservableObject {
     @Published var pendingContextURLs: [URL] = []
     @Published var wordDraftReview: WordDraftReview?
     @Published var isExtractingContext = false
+    @Published var useDocumentLibrary = false
+    @Published var isSearchingDocumentLibrary = false
     @Published var isTargetingContext = false
     let screenPicker: ScreenContextCapturing?
 
@@ -1049,6 +1122,106 @@ private final class AssistantViewState: ObservableObject {
         guard showFirstRunTip else { return }
         showFirstRunTip = false
         UserDefaults.standard.set(true, forKey: Self.firstRunTipDismissedKey)
+    }
+}
+
+private struct DocumentLibraryManagerSheet: View {
+    @ObservedObject var store: DocumentLibraryStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 9) {
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+                Text("My Documents")
+                    .font(.system(size: 17, weight: .bold))
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+
+            Text("Choose folders to make their PDFs, Word documents, text files, RTF and Markdown searchable. NOVA searches them on this Mac only when you enable My Documents for a message.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if store.folders.isEmpty {
+                Text("No folders added yet.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 72)
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
+            } else {
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(store.folders) { folder in
+                            HStack(spacing: 9) {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(Color.accentColor)
+                                Text(folder.name)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                Button {
+                                    store.removeFolder(folder)
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("Remove \(folder.name) from My Documents")
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+                        }
+                    }
+                }
+                .frame(maxHeight: 145)
+            }
+
+            Button(action: addFolders) {
+                Label("Choose folders…", systemImage: "folder.badge.plus")
+            }
+            .buttonStyle(.bordered)
+
+            Text("Only up to four relevant excerpts are sent with a message when you turn this on. Otherwise, no text from these folders is sent to NOVA.")
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(20)
+        .frame(width: 430)
+        .frame(minHeight: 320)
+    }
+
+    private func addFolders() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose Document Folders"
+        panel.message = "NOVA will search supported documents in these folders only when you enable My Documents for a message."
+        panel.prompt = "Add Folders"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.canCreateDirectories = false
+
+        guard panel.runModal() == .OK else { return }
+        do {
+            try store.addFolders(at: panel.urls)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 

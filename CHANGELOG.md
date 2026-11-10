@@ -1,3 +1,11 @@
+# NOVA Copilot for macOS Version 1.6.0 (2026-11-10)
+
+- Adds an optional My Documents library: choose folders once, then explicitly enable a one-message search when you want NOVA to use them.
+- Searches PDFs, Word documents, RTF, Markdown and plain-text files locally, ranks matches against the question, and sends at most four short excerpts only for that opted-in request.
+- Keeps document text out of saved chat history; replies show the existing collapsed source-details disclosure for the files used.
+- Adds persistent, user-selected folder bookmarks for the macOS app sandbox.
+- Bumps the Mac marketing version to 1.6.0 and build number to 24.
+
 # NOVA Copilot for macOS Version 1.5.6 (2026-11-10)
 
 - Adds a collapsed source-details disclosure under replies to requests with attached files, showing their exact filenames and PDF pages included in the extracted text.

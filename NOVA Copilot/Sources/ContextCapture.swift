@@ -11,6 +11,7 @@ struct ContextAttachment: Identifiable {
         case pdf
         case screenshot
         case word
+        case textDocument
 
         var label: String {
             switch self {
@@ -18,6 +19,7 @@ struct ContextAttachment: Identifiable {
             case .pdf: return "PDF"
             case .screenshot: return "Screenshot"
             case .word: return "Word document"
+            case .textDocument: return "Text document"
             }
         }
 
@@ -27,6 +29,7 @@ struct ContextAttachment: Identifiable {
             case .pdf: return "doc.richtext"
             case .screenshot: return "viewfinder"
             case .word: return "doc.text"
+            case .textDocument: return "doc.plaintext"
             }
         }
     }
@@ -37,6 +40,7 @@ struct ContextAttachment: Identifiable {
     let extractedText: String
     let previewData: Data?
     let originalCharacterCount: Int
+    var fromLibrary: Bool = false
 
     var wasTruncated: Bool { extractedText.count < originalCharacterCount }
 }
@@ -50,7 +54,7 @@ enum ContextCaptureError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unsupportedFile:
-            return "Choose an image, PDF or Word document."
+            return "Choose an image, PDF, Word, text, RTF or Markdown document."
         case .fileTooLarge:
             return "This file is too large to read. Choose a file smaller than 20 MB."
         case .noReadableText:
@@ -103,6 +107,31 @@ enum ContextTextExtractor {
                 text: WordDocument.readText(from: url),
                 previewData: nil
             )
+        }
+        switch url.pathExtension.lowercased() {
+        case "txt", "md":
+            let data = try Data(contentsOf: url)
+            let text = String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
+            return try makeAttachment(
+                name: url.lastPathComponent,
+                kind: .textDocument,
+                text: text,
+                previewData: nil
+            )
+        case "rtf":
+            let attributed = try NSAttributedString(
+                url: url,
+                options: [.documentType: NSAttributedString.DocumentType.rtf],
+                documentAttributes: nil
+            )
+            return try makeAttachment(
+                name: url.lastPathComponent,
+                kind: .textDocument,
+                text: attributed.string,
+                previewData: nil
+            )
+        default:
+            break
         }
         if UTType(filenameExtension: url.pathExtension)?.conforms(to: .pdf) == true {
             return try extractPDF(at: url)

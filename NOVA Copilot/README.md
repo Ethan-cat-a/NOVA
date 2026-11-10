@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.5.6-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.5.6 adds compact source details for answers based on attached files.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.6/NOVA-Copilot-1.5.6.dmg"><strong>↓ Download Mac app · 1.5.6 DMG</strong></a></p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.6.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Version 1.6.0 adds optional, on-demand search across document folders you choose.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.0/NOVA-Copilot-1.6.0.dmg"><strong>↓ Download Mac app · 1.6.0 DMG</strong></a></p>
 </div>
 
 ---
@@ -28,6 +28,8 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 - Optional Launch at Login and Keep on Top.
 - Text extraction for up to five context items total—images, PDFs, Word documents or screen captures—runs locally. Review each item before sending; NOVA receives only the text you approve, not the original files.
 - Completed replies to file-based questions can show a collapsed source-details row with the supplied filenames and PDF pages; NOVA is asked to cite only details present in the extracted text.
+- Add document folders once, then enable **My Documents** for a single request. NOVA searches PDFs, Word, RTF, Markdown and text files locally and sends at most four relevant excerpts only for that request.
+- Without the per-message **My Documents** option, no text from the saved folders is sent. Document contents are not added to saved chat history.
 - Screen and window capture uses the macOS 14+ system picker; image and PDF import works on macOS 13+.
 - Import `.docx` or `.doc` files for text context. Choose **Word Doc** mode to create a document or fill an imported one, then review, edit and save the result as `.docx`.
 - When adding a new document in Word Doc mode, include the details to fill in your current message; earlier chat drafts are not included.
@@ -39,7 +41,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the Mac app DMG (1.5.6)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.5.6/NOVA-Copilot-1.5.6.dmg).
+1. [Download the Mac app DMG (1.6.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.0/NOVA-Copilot-1.6.0.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 
@@ -54,6 +56,7 @@ Requires **macOS 13 or later**. The universal build supports Apple silicon and I
 - No NOVA/OpenRouter model key is embedded; chat requests go to the NOVA Copilot gateway, which verifies the account and forwards the existing NOVA V8 response.
 - The Supabase publishable key is used only for account authentication; the access and refresh tokens are stored in macOS Keychain.
 - Chat history stays on your Mac.
+- The document library stores folder access bookmarks on your Mac. Searching and text extraction run locally; only opted-in excerpts are included in that message to NOVA.
 - Clipboard text is read only when you choose the clipboard action; the app does not monitor it.
 
 Google sign-in uses Supabase Auth and a system browser. The first project setup requires Google OAuth credentials and the app callback URL in Supabase; see the [setup guide](../GOOGLE_SIGN_IN_SETUP.md). The Google client secret stays in Supabase and is never included in the app.
