@@ -1,3 +1,8 @@
+# NOVA Copilot for Windows Version 1.5.3 (2026-11-14)
+
+- Fixes startup failure caused by Tk parsing the space in `Segoe UI` as a font-size separator.
+- Bumps the Windows client to 1.5.3.
+
 # NOVA Copilot for macOS Version 1.6.5 (2026-11-14)
 
 - Adds an opt-in Agent mode powered by Nemotron 3 Ultra with a bounded OpenRouter tool-call loop.

@@ -7,13 +7,13 @@
   <p>
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.5/NOVA-Copilot-1.6.5.dmg"><strong>Download latest macOS app · 1.6.5 DMG</strong></a>
     &nbsp; · &nbsp;
-    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.2/NOVA-Copilot-Windows-1.5.2.exe"><strong>Download Windows app · 1.5.2</strong></a>
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.3/NOVA-Copilot-Windows-1.5.3.exe"><strong>Download Windows app · 1.5.3</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
     <img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.6.5-263C63?style=flat-square&logo=apple&logoColor=white" />
-    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.2-2857C5?style=flat-square&logo=windows&logoColor=white" />
+    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.3-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
 </div>
@@ -54,7 +54,7 @@
     </td>
     <td width="50%" valign="top">
       <h3>⊞ &nbsp; NOVA Copilot for Windows</h3>
-      <p><strong>Source version 1.5.2 · Python / Tkinter</strong></p>
+      <p><strong>Source version 1.5.3 · Python / Tkinter</strong></p>
       <p>A standalone Windows edition for Windows 10 and 11 PCs.</p>
       <ul>
         <li>Chat as a guest with optional Google or email/password sign-in</li>
@@ -65,17 +65,17 @@
         <li>Word Doc mode, editable document drafts and reviewed PDF text</li>
         <li>Copy, Try again and a manual update check</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.2/NOVA-Copilot-Windows-1.5.2.exe"><strong>↓ Download Windows app · 1.5.2 EXE</strong></a></p>
-      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.5.2.md">Release notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.3/NOVA-Copilot-Windows-1.5.3.exe"><strong>↓ Download Windows app · 1.5.3 EXE</strong></a></p>
+      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.5.3.md">Release notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
     </td>
   </tr>
 </table>
 
-> Version 1.6.5 is the latest macOS release. Version 1.5.2 is the latest Windows release.
+> Version 1.6.5 is the latest macOS release. Version 1.5.3 is the latest Windows release.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
-> **Windows install:** Download and open the Windows 1.5.2 EXE above; no ZIP extraction or Python install is needed. The app is unsigned, so Windows SmartScreen may show a warning. GitHub Actions builds it on a Windows runner.
+> **Windows install:** Download and open the Windows 1.5.3 EXE above; no ZIP extraction or Python install is needed. The app is unsigned, so Windows SmartScreen may show a warning. GitHub Actions builds it on a Windows runner.
 
 ## The essentials
 
@@ -147,6 +147,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for Windows — 1.5.3](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.5.3)
 - [NOVA Copilot for macOS — 1.6.5](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.5)
 - [NOVA Copilot for macOS — 1.6.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.0)
 - [NOVA Copilot for macOS — 1.5.6](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.6)

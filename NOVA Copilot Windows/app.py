@@ -32,7 +32,7 @@ except Exception:  # Tray support is optional when running directly from source.
     Image = ImageDraw = ImageFont = None
 
 APP_NAME = "NOVA Copilot"
-APP_VERSION = "1.5.2"
+APP_VERSION = "1.5.3"
 CHAT_URL = "https://nova-copilot-gateway.vercel.app/api/chat"
 SUPABASE_URL = "https://nhzpodixkjhynvcwnzok.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_LqyBAJMOMir72jmLcziX_A_wArHa_L0"
@@ -251,7 +251,8 @@ class NovaCopilotApp:
         self.root.geometry(f"430x700+{max(0, screen_w - 448)}+30")
         self.root.configure(bg=BG)
         self.root.protocol("WM_DELETE_WINDOW", self.hide_panel)
-        self.root.option_add("*Font", "Segoe UI 10")
+        # Tk parses option-database fonts as Tcl lists; brace the family name because it contains a space.
+        self.root.option_add("*Font", "{Segoe UI} 10")
 
         self.threads = load_threads()
         self.auth_session = self._load_auth_session()
