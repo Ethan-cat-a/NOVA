@@ -14,17 +14,26 @@ enum DocumentLibraryError: LocalizedError {
     case noSupportedDocuments
     case noSearchTerms
     case noMatches
+    case noGitRepository
+    case gitUnavailable
+    case gitFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .noFolders:
             return "Choose a document folder first."
         case .noSupportedDocuments:
-            return "No readable PDF, Word, text, RTF or Markdown documents were found in those folders."
+            return "No readable documents or source-code files were found in those folders."
         case .noSearchTerms:
             return "Add a few details to your question so NOVA can find relevant documents."
         case .noMatches:
             return "No matching documents found. Try a phrase or name that appears in the files."
+        case .noGitRepository:
+            return "Add the root folder of a Git repository to My Documents first."
+        case .gitUnavailable:
+            return "Git could not be started in this sandboxed app."
+        case .gitFailed(let detail):
+            return detail
         }
     }
 }
@@ -77,6 +86,35 @@ final class DocumentLibraryStore: ObservableObject {
         return try await Task.detached(priority: .userInitiated) {
             try await DocumentLibrarySearch.retrieve(query: query, folders: savedFolders)
         }.value
+    }
+
+    func retrieveGitSummary() async throws -> String {
+        guard !folders.isEmpty else { throw DocumentLibraryError.noFolders }
+        let savedFolders = folders
+        return try await Task.detached(priority: .userInitiated) {
+            try DocumentLibrarySearch.gitSummary(folders: savedFolders)
+        }.value
+    }
+
+    func openFirstFolderInXcode() throws {
+        guard !folders.isEmpty else { throw DocumentLibraryError.noFolders }
+        for folder in folders {
+            var isStale = false
+            guard let url = try? URL(
+                resolvingBookmarkData: folder.bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ) else { continue }
+            let didStartAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didStartAccess { url.stopAccessingSecurityScopedResource() }
+            }
+            guard didStartAccess else { continue }
+            try CSAgentComputerTools.openXcodeProject(in: url)
+            return
+        }
+        throw DocumentLibraryError.noFolders
     }
 
     private func save() {
@@ -159,6 +197,67 @@ private enum DocumentLibrarySearch {
         }
     }
 
+    static func gitSummary(folders: [DocumentLibraryFolder]) throws -> String {
+        for folder in folders {
+            var isStale = false
+            guard let url = try? URL(
+                resolvingBookmarkData: folder.bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ) else { continue }
+            let didStartAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didStartAccess { url.stopAccessingSecurityScopedResource() }
+            }
+            guard didStartAccess else { continue }
+            let gitDirectory = url.appendingPathComponent(".git", isDirectory: true)
+            guard FileManager.default.fileExists(atPath: gitDirectory.path) else { continue }
+
+            let status = try runGit(in: url, arguments: ["status", "--short", "--branch", "--no-optional-locks"])
+            let changeSummary = try runGit(in: url, arguments: ["diff", "--stat", "--no-ext-diff"])
+            let latestCommit = try runGit(in: url, arguments: ["log", "-1", "--oneline", "--no-decorate"])
+            return [
+                "Repository: \(folder.name)",
+                "Git status (read-only):\n\(status.isEmpty ? "Clean working tree" : status)",
+                "Unstaged change summary:\n\(changeSummary.isEmpty ? "No unstaged changes" : changeSummary)",
+                "Latest commit:\n\(latestCommit.isEmpty ? "No commits found" : latestCommit)"
+            ].joined(separator: "\n\n").prefix(8_000).description
+        }
+        throw DocumentLibraryError.noGitRepository
+    }
+
+    private static func runGit(in folder: URL, arguments: [String]) throws -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", folder.path] + arguments
+        process.environment = [
+            "HOME": FileManager.default.homeDirectoryForCurrentUser.path,
+            "PATH": "/usr/bin:/bin",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_OPTIONAL_LOCKS": "0"
+        ]
+
+        let output = Pipe()
+        let errors = Pipe()
+        process.standardOutput = output
+        process.standardError = errors
+        do {
+            try process.run()
+        } catch {
+            throw DocumentLibraryError.gitUnavailable
+        }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errors.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        let stdout = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard process.terminationStatus == 0 else {
+            let detail = String(decoding: errorData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            throw DocumentLibraryError.gitFailed(detail.isEmpty ? "Git could not read this repository." : String(detail.prefix(240)))
+        }
+        return String(stdout.prefix(5_000))
+    }
+
     private static func readAndRank(_ url: URL, terms: Set<String>) async -> RankedDocument? {
         guard let attachment = try? await ContextTextExtractor.readFile(at: url) else { return nil }
         let text = attachment.extractedText.lowercased()
@@ -185,7 +284,7 @@ private enum DocumentLibrarySearch {
             ) else { continue }
             for case let fileURL as URL in enumerator {
                 let ext = fileURL.pathExtension.lowercased()
-                guard ["pdf", "doc", "docx", "txt", "rtf", "md"].contains(ext),
+                guard ["pdf", "doc", "docx", "txt", "rtf", "md", "swift", "m", "h", "c", "cc", "cpp", "cxx", "py", "js", "jsx", "ts", "tsx", "java", "kt", "go", "rs", "rb", "php", "sh", "zsh", "json", "yaml", "yml", "toml", "xml", "plist", "html", "css", "scss", "sql", "gradle", "xcodeproj", "pbxproj"].contains(ext),
                       (try? fileURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true,
                       seenPaths.insert(fileURL.standardizedFileURL.path).inserted else { continue }
                 files.append(fileURL)

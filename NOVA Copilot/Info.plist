@@ -37,6 +37,8 @@
 	<false/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>NOVA can read the visible text and address of the current Google Chrome tab only when you choose Share current Chrome page. Review the extracted text before sending it to NOVA.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>SUAutomaticallyUpdate</key>

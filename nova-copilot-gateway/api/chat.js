@@ -161,7 +161,7 @@ function routeForPayload(payload) {
   const modeMatch = /^Active response mode\s*\(([^)]+)\)\s*:/im.exec(modeInstruction);
   const mode = (modeMatch?.[1] || "fast").replace(/[\s_-]/g, "").toLowerCase();
   if (mode === "thinker" || mode === "hardthinker") return { mode: "thinker", ...MODEL_ROUTES.thinker };
-  if (mode === "agent" || mode === "agentic") return { mode: "agent", ...MODEL_ROUTES.agent };
+  if (mode === "agent" || mode === "agentic" || mode === "csagent") return { mode: "agent", ...MODEL_ROUTES.agent };
   if (mode === "coding") return { mode: "coding", ...MODEL_ROUTES.coding };
   if (mode === "worddocument" || mode === "worddoc") return { mode: "wordDocument", ...MODEL_ROUTES.worddocument };
   return { mode: "fast", ...MODEL_ROUTES.fast };

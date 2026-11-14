@@ -54,7 +54,7 @@ enum ContextCaptureError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unsupportedFile:
-            return "Choose an image, PDF, Word, text, RTF or Markdown document."
+            return "Choose an image, PDF, Word document or supported source-code file."
         case .fileTooLarge:
             return "This file is too large to read. Choose a file smaller than 20 MB."
         case .noReadableText:
@@ -67,6 +67,15 @@ enum ContextCaptureError: LocalizedError {
 
 enum ContextTextExtractor {
     static let maximumCharacters = 15_000
+    static let sourceCodeExtensions = [
+        "swift", "m", "h", "c", "cc", "cpp", "cxx", "py", "js", "jsx", "ts", "tsx",
+        "java", "kt", "go", "rs", "rb", "php", "sh", "zsh", "json", "yaml", "yml",
+        "toml", "xml", "plist", "html", "css", "scss", "sql", "gradle", "pbxproj"
+    ]
+    static var sourceCodeTypes: [UTType] {
+        sourceCodeExtensions.compactMap { UTType(filenameExtension: $0) }
+    }
+
     private static let maximumFileBytes = 20 * 1024 * 1024
     private static let maximumPDFPages = 12
 
@@ -109,7 +118,7 @@ enum ContextTextExtractor {
             )
         }
         switch url.pathExtension.lowercased() {
-        case "txt", "md":
+        case "txt", "md", "swift", "m", "h", "c", "cc", "cpp", "cxx", "py", "js", "jsx", "ts", "tsx", "java", "kt", "go", "rs", "rb", "php", "sh", "zsh", "json", "yaml", "yml", "toml", "xml", "plist", "html", "css", "scss", "sql", "gradle", "pbxproj":
             let data = try Data(contentsOf: url)
             let text = String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
             return try makeAttachment(

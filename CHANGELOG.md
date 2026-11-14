@@ -3,6 +3,14 @@
 - Fixes startup failure caused by Tk parsing the space in `Segoe UI` as a font-size separator.
 - Bumps the Windows client to 1.5.3.
 
+# NOVA Copilot for macOS Version 1.6.6 (2026-11-14)
+
+- Combines Coding, Word Doc and Agent into one CS Agent mode; existing chats in those modes migrate automatically.
+- Adds project-source file search and an optional, read-only Git summary from a folder the user selected.
+- Adds a per-reply Word export option, reviewed Chrome page import, Google Search handoff to Chrome, and open-in-Xcode/Microsoft Word actions.
+- Restricts Google Chrome reading to the current tab after an explicit action and a local text preview; macOS Automation permission is requested by the OS.
+- Bumps the Mac marketing version to 1.6.6 and build number to 26.
+
 # NOVA Copilot for macOS Version 1.6.5 (2026-11-14)
 
 - Adds an opt-in Agent mode powered by Nemotron 3 Ultra with a bounded OpenRouter tool-call loop.

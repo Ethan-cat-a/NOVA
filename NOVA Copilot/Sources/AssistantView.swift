@@ -81,7 +81,7 @@ struct AssistantView: View {
         .onExitCommand(perform: onHide)
         .fileImporter(
             isPresented: $viewState.showsContextImporter,
-            allowedContentTypes: [.image, .pdf, .plainText, .rtf, UTType(filenameExtension: "md") ?? .plainText] + WordDocument.importTypes,
+            allowedContentTypes: [.image, .pdf, .plainText, .rtf, UTType(filenameExtension: "md") ?? .plainText] + WordDocument.importTypes + ContextTextExtractor.sourceCodeTypes,
             allowsMultipleSelection: true,
             onCompletion: handleContextImport
         )
@@ -104,6 +104,8 @@ struct AssistantView: View {
         }
         .onChange(of: model.activeThreadID) { _ in
             viewState.useDocumentLibrary = false
+            viewState.useGitContext = false
+            viewState.makeWordDocument = false
         }
         .onChange(of: viewState.contextReview?.id) { id in
             if id == nil { processNextContextFile() }
@@ -376,25 +378,11 @@ struct AssistantView: View {
                 .labelsHidden()
                 .controlSize(.small)
             }
-            if model.currentMode == .wordDocument {
+            if model.currentMode == .csAgent {
                 HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "doc.text")
+                    Image(systemName: "terminal")
                         .foregroundStyle(accent)
-                    Text("Create a document or fill one with details. New files format headings, lists, bold and italics; original layouts, tables and images aren’t retained.")
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    Button("Add files…") { viewState.showsContextImporter = true }
-                        .buttonStyle(.plain)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(accent)
-                }
-                .font(.system(size: 10))
-                .foregroundStyle(muted)
-            } else if model.currentMode == .agent {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(accent)
-                    Text("Agent can calculate and search text from files attached or selected for this chat. It cannot change files or run commands.")
+                    Text("CS Agent combines coding, Word documents and plugins. Choose a project folder, share a Chrome page, or include Git status when useful. NOVA reviews shared text before sending it.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .font(.system(size: 10))
@@ -563,7 +551,7 @@ struct AssistantView: View {
                             inputFocused = true
                         }
                         starter("Help with code", subtitle: "Debug, build, or improve a project", icon: "chevron.left.forwardslash.chevron.right") {
-                            model.setMode(.coding)
+                            model.setMode(.csAgent)
                             model.input = "Help me debug or improve this code:\n"
                             inputFocused = true
                         }
@@ -786,36 +774,95 @@ struct AssistantView: View {
         }
         let attachments = viewState.contextAttachments
         let wordDocuments = attachments.filter { $0.kind == .word }
-        if model.currentMode == .wordDocument, wordDocuments.count > 1 {
-            showFeedback("Word Doc mode can fill one Word document at a time. Keep one Word file attached and use the other files as references.", isError: true)
+        if viewState.makeWordDocument, wordDocuments.count > 1 {
+            showFeedback("CS Agent can fill one Word document at a time. Keep one Word file attached and use the other files as references.", isError: true)
             return
         }
-        if model.currentMode == .wordDocument, wordDocuments.first?.wasTruncated == true {
+        if viewState.makeWordDocument, wordDocuments.first?.wasTruncated == true {
             showFeedback("This document is too long to fill safely. Try a shorter document or ask about it in another mode.", isError: true)
             return
         }
-        guard viewState.useDocumentLibrary else {
-            model.send(contextAttachments: attachments)
+        let wantsLocalContext = viewState.useDocumentLibrary || viewState.useGitContext
+        guard wantsLocalContext else {
+            model.send(contextAttachments: attachments, makeWordDocument: viewState.makeWordDocument)
             if !attachments.isEmpty { viewState.contextAttachments = [] }
+            viewState.makeWordDocument = false
             return
         }
 
         guard !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            showFeedback("Add a question so NOVA knows what to find in your documents.", isError: true)
+            showFeedback("Add a question so NOVA knows what to find in your files or Git repository.", isError: true)
             return
         }
 
         viewState.isSearchingDocumentLibrary = true
         Task { @MainActor in
             do {
-                let matches = try await documentLibrary.retrieveRelevantDocuments(for: model.input)
-                model.send(contextAttachments: attachments, libraryAttachments: matches)
+                let matches = viewState.useDocumentLibrary
+                    ? try await documentLibrary.retrieveRelevantDocuments(for: model.input)
+                    : []
+                let gitContext = viewState.useGitContext
+                    ? try await documentLibrary.retrieveGitSummary()
+                    : nil
+                model.send(
+                    contextAttachments: attachments,
+                    libraryAttachments: matches,
+                    gitContext: gitContext,
+                    makeWordDocument: viewState.makeWordDocument
+                )
                 viewState.contextAttachments = []
                 viewState.useDocumentLibrary = false
+                viewState.useGitContext = false
+                viewState.makeWordDocument = false
             } catch {
                 showFeedback(error.localizedDescription, isError: true)
             }
             viewState.isSearchingDocumentLibrary = false
+        }
+    }
+
+    private func shareCurrentChromePage() {
+        guard !model.isSending else {
+            showFeedback("Wait for the current reply to finish before sharing a browser page.", isError: true)
+            return
+        }
+        viewState.isExtractingContext = true
+        do {
+            viewState.contextReview = try CSAgentComputerTools.readCurrentChromePage()
+        } catch {
+            showFeedback(error.localizedDescription, isError: true)
+        }
+        viewState.isExtractingContext = false
+    }
+
+    private func searchQuestionInChrome() {
+        do {
+            try CSAgentComputerTools.searchGoogleInChrome(model.input)
+            showFeedback("Google Search opened in Chrome. Review results, then share the page if you want NOVA to use it.")
+        } catch {
+            showFeedback(error.localizedDescription, isError: true)
+        }
+    }
+
+    private func openWorkspaceInXcode() {
+        guard !documentLibrary.folders.isEmpty else {
+            showsDocumentLibrary = true
+            return
+        }
+        do {
+            try documentLibrary.openFirstFolderInXcode()
+            showFeedback("Selected project opened in Xcode.")
+        } catch {
+            showFeedback(error.localizedDescription, isError: true)
+        }
+    }
+
+    private func openWord() {
+        do {
+            try CSAgentComputerTools.openMicrosoftWord()
+            showFeedback("Microsoft Word opened.")
+        } catch {
+            showFeedback(error.localizedDescription, isError: true)
         }
     }
 
@@ -925,6 +972,18 @@ struct AssistantView: View {
                             systemImage: viewState.useDocumentLibrary ? "checkmark.circle.fill" : "books.vertical"
                         )
                     }
+                    Button {
+                        if documentLibrary.folders.isEmpty {
+                            showsDocumentLibrary = true
+                        } else {
+                            viewState.useGitContext.toggle()
+                        }
+                    } label: {
+                        Label(
+                            viewState.useGitContext ? "Remove Git status for this message" : "Include Git status for next message",
+                            systemImage: viewState.useGitContext ? "checkmark.circle.fill" : "arrow.triangle.branch"
+                        )
+                    }
                     Divider()
                     Button { showsDocumentLibrary = true } label: {
                         Label("Manage document folders…", systemImage: "folder.badge.gearshape")
@@ -932,17 +991,17 @@ struct AssistantView: View {
                 } label: {
                     Image(systemName: "books.vertical")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(viewState.useDocumentLibrary ? accent : muted)
+                        .foregroundStyle((viewState.useDocumentLibrary || viewState.useGitContext) ? accent : muted)
                         .frame(width: 32, height: 38)
                         .background(
-                            viewState.useDocumentLibrary ? accent.opacity(0.10) : Color(nsColor: .controlBackgroundColor),
+                            (viewState.useDocumentLibrary || viewState.useGitContext) ? accent.opacity(0.10) : Color(nsColor: .controlBackgroundColor),
                             in: RoundedRectangle(cornerRadius: 10)
                         )
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(viewState.useDocumentLibrary ? accent.opacity(0.35) : Color(nsColor: .separatorColor), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke((viewState.useDocumentLibrary || viewState.useGitContext) ? accent.opacity(0.35) : Color(nsColor: .separatorColor), lineWidth: 1))
                 }
                 .menuStyle(.borderlessButton)
-                .accessibilityLabel(viewState.useDocumentLibrary ? "My Documents enabled for next message" : "Use My Documents for next message")
-                .help(viewState.useDocumentLibrary ? "My Documents will be searched for this next message" : "Search your chosen document folders for this next message")
+                .accessibilityLabel(viewState.useGitContext ? "Git status enabled for next message" : (viewState.useDocumentLibrary ? "My Documents enabled for next message" : "Use My Documents for next message"))
+                .help("Choose My Documents or read-only Git context for one request")
 
                 Menu {
                     Button {
@@ -972,6 +1031,31 @@ struct AssistantView: View {
                     } label: {
                         Label("Add copied text", systemImage: "doc.on.clipboard")
                     }
+                    if model.currentMode == .csAgent {
+                        Divider()
+                        Button {
+                            viewState.makeWordDocument.toggle()
+                        } label: {
+                            Label(
+                                viewState.makeWordDocument ? "Don’t make a Word file" : "Make next reply a Word file",
+                                systemImage: viewState.makeWordDocument ? "checkmark.circle.fill" : "doc.text"
+                            )
+                        }
+                        Menu("CS Agent apps and plugins") {
+                            Button(action: shareCurrentChromePage) {
+                                Label("Share current Chrome page…", systemImage: "safari")
+                            }
+                            Button(action: searchQuestionInChrome) {
+                                Label("Search this question in Google Chrome", systemImage: "magnifyingglass")
+                            }
+                            Button(action: openWorkspaceInXcode) {
+                                Label("Open selected project in Xcode", systemImage: "hammer")
+                            }
+                            Button(action: openWord) {
+                                Label("Open Microsoft Word", systemImage: "doc.richtext")
+                            }
+                        }
+                    }
                 } label: {
                     Image(systemName: "paperclip")
                         .font(.system(size: 14, weight: .semibold))
@@ -981,12 +1065,12 @@ struct AssistantView: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
                 }
                 .menuStyle(.borderlessButton)
-                .help("Add up to 5 images, PDFs or Word documents, capture a screen, or add copied text")
+                .help("Attach source files, capture a screen, add copied text, or open CS Agent tools")
 
                 TextField(
                     viewState.contextAttachments.isEmpty
-                        ? (model.currentMode == .wordDocument ? "Describe your Word document…" : "Message Nova V8…")
-                        : (model.currentMode == .wordDocument && viewState.contextAttachments.contains(where: { $0.kind == .word })
+                        ? (viewState.makeWordDocument ? "Describe the Word file to create…" : "Message Nova V8…")
+                        : (viewState.makeWordDocument && viewState.contextAttachments.contains(where: { $0.kind == .word })
                            ? "How should NOVA fill this document?"
                            : "Ask about these files…"),
                     text: $model.input,
@@ -1006,16 +1090,16 @@ struct AssistantView: View {
 
                 Button { sendMessage() } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: model.isSending ? "stop.fill" : (model.currentMode == .wordDocument ? "doc.text" : "arrow.up"))
+                        Image(systemName: model.isSending ? "stop.fill" : (viewState.makeWordDocument ? "doc.text" : "arrow.up"))
                         if model.isSending {
                             Text("Stop")
-                        } else if model.currentMode == .wordDocument {
+                        } else if viewState.makeWordDocument {
                             Text(viewState.contextAttachments.contains(where: { $0.kind == .word }) ? "Fill" : "Create")
                         }
                     }
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, (model.currentMode == .wordDocument && !model.isSending) || model.isSending ? 10 : 0)
+                    .padding(.horizontal, (viewState.makeWordDocument && !model.isSending) || model.isSending ? 10 : 0)
                     .frame(minWidth: 38, minHeight: 38)
                     .background(model.isSending ? Color(red: 0.35, green: 0.40, blue: 0.49) : accent, in: RoundedRectangle(cornerRadius: 11))
                 }
@@ -1024,7 +1108,7 @@ struct AssistantView: View {
                 .disabled(viewState.isSearchingDocumentLibrary || (!model.isSending && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty))
                 .opacity(!model.isSending && !viewState.isSearchingDocumentLibrary && model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && viewState.contextAttachments.isEmpty ? 0.55 : 1)
                 .accessibilityLabel(model.isSending ? "Stop response" : "Send message")
-                .help(model.isSending ? "Stop response" : (model.currentMode == .wordDocument ? "Create or fill a Word document (⌘Return)" : "Send message (⌘Return)"))
+                .help(model.isSending ? "Stop response" : (viewState.makeWordDocument ? "Create or fill a Word document (⌘Return)" : "Send message (⌘Return)"))
             }
             if viewState.isExtractingContext {
                 HStack(spacing: 7) {
@@ -1111,6 +1195,8 @@ private final class AssistantViewState: ObservableObject {
     @Published var isExtractingContext = false
     @Published var useDocumentLibrary = false
     @Published var isSearchingDocumentLibrary = false
+    @Published var useGitContext = false
+    @Published var makeWordDocument = false
     @Published var isTargetingContext = false
     let screenPicker: ScreenContextCapturing?
 
