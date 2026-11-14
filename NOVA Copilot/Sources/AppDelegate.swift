@@ -269,8 +269,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
             self?.panel.level = pinned ? .floating : .normal
         }
 
-        // Leave the assistant tucked away, with both quick access points ready.
-        showEdgeHandle(on: screenUnderPointer(), animated: true)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(restoreEdgeHandle(_:)),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(restoreEdgeHandle(_:)),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+
+        // Put the launcher on the primary display and retry after the first app event turn,
+        // when macOS has finished restoring the screen list and spaces.
+        showEdgeHandle(on: primaryScreen(), animated: true)
+        DispatchQueue.main.async { [weak self] in
+            self?.restoreEdgeHandle(nil)
+        }
+    }
+
+    @objc private func restoreEdgeHandle(_ notification: Notification?) {
+        guard !panel.isVisible else { return }
+        showEdgeHandle(on: primaryScreen(), animated: false)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -427,6 +449,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         let showItem = NSMenuItem(title: "Show NOVA Copilot", action: #selector(showPanelFromMenu), keyEquivalent: "")
         showItem.target = self
         windowMenu.addItem(showItem)
+        let showLauncherItem = NSMenuItem(
+            title: "Show NOVA Side Launcher",
+            action: #selector(showEdgeLauncherFromMenu),
+            keyEquivalent: ""
+        )
+        showLauncherItem.target = self
+        windowMenu.addItem(showLauncherItem)
 
         let windowMenuItem = NSMenuItem()
         windowMenuItem.submenu = windowMenu
@@ -436,6 +465,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     }
 
     @objc private func showPanelFromMenu() { showPanel() }
+
+    @objc private func showEdgeLauncherFromMenu() {
+        guard !panel.isVisible else {
+            hidePanel()
+            return
+        }
+        showEdgeHandle(on: primaryScreen(), animated: true)
+    }
 
     @objc private func checkForUpdates() {
         updateStatus.beginCheck()
@@ -568,6 +605,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         edgeHandlePanel.isOpaque = false
         edgeHandlePanel.backgroundColor = .clear
         edgeHandlePanel.hasShadow = false
+        edgeHandlePanel.isFloatingPanel = true
+        edgeHandlePanel.hidesOnDeactivate = false
+        edgeHandlePanel.becomesKeyOnlyIfNeeded = true
+        edgeHandlePanel.worksWhenModal = true
         edgeHandlePanel.level = .floating
         edgeHandlePanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         edgeHandlePanel.isMovableByWindowBackground = false
@@ -719,6 +760,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         let topAlignedY = visible.maxY - frame.height - 12
         let y = max(visible.minY + 12, topAlignedY)
         return NSPoint(x: x, y: y)
+    }
+
+    private func primaryScreen() -> NSScreen? {
+        NSScreen.main ?? NSScreen.screens.first
     }
 
     private func screenUnderPointer() -> NSScreen? {

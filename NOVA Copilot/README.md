@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS source" src="https://img.shields.io/badge/source-1.7.1-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.7.1 fixes the side launcher so the avatar stays visible when collapsed and the drag grip remains on-screen when expanded.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.7.1/NOVA-Copilot-1.7.1.dmg"><strong>↓ Latest published Mac app · 1.7.1 DMG</strong></a></p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/source-1.7.2-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Version 1.7.2 restores the side launcher on the primary display and adds **Window → Show NOVA Side Launcher** if you need to bring it back.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.7.2/NOVA-Copilot-1.7.2.dmg"><strong>↓ Latest published Mac app · 1.7.2 DMG</strong></a></p>
 </div>
 
 ---
@@ -47,13 +47,13 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the latest Mac app DMG (1.7.1)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.7.1/NOVA-Copilot-1.7.1.dmg).
+1. [Download the latest Mac app DMG (1.7.2)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.7.2/NOVA-Copilot-1.7.2.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 
 Requires **macOS 13 or later**. The universal build supports Apple silicon and Intel Macs.
 
-> **Upgrade:** Users on 1.2.0, 1.3.0 or 1.3.1 need to install 1.3.2 manually once. Users on 1.6.7 or 1.6.8 should install the 1.7.1 DMG manually once; their updater cannot install the Sparkle fix. Users on 1.6.9 and later can use the in-app updater.
+> **Upgrade:** Users on 1.2.0, 1.3.0 or 1.3.1 need to install 1.3.2 manually once. Users on 1.6.7 or 1.6.8 should install the 1.7.2 DMG manually once; their updater cannot install the Sparkle fix. Users on 1.6.9 and later can use the in-app updater.
 
 > **First launch:** This build is not signed with an Apple Developer ID or notarized. If macOS blocks it, Control-click **NOVA Copilot.app** in Applications, choose **Open**, then confirm **Open**. Only install apps from a source you trust.
 
