@@ -147,6 +147,30 @@ private struct EdgeHandleView: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            Button(action: onOpen) {
+                NovaAvatarView(size: 34, isActive: state.isHovered || state.isDragging)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open NOVA Copilot")
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("NOVA COPILOT")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .tracking(0.55)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text("Ready when you are")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.62))
+                    .lineLimit(1)
+            }
+            .frame(width: state.isHovered ? 82 : 0, alignment: .leading)
+            .opacity(state.isHovered ? 1 : 0)
+            .clipped()
+
+            Spacer(minLength: 0)
+
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(Color.white.opacity(0.58))
@@ -165,32 +189,6 @@ private struct EdgeHandleView: View {
                         }
                 )
                 .help("Drag to reposition NOVA")
-
-            Button(action: onOpen) {
-                HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("NOVA COPILOT")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .tracking(0.55)
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Text("Ready when you are")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.62))
-                            .lineLimit(1)
-                    }
-                    .frame(width: state.isHovered ? 82 : 0, alignment: .leading)
-                    .opacity(state.isHovered ? 1 : 0)
-                    .clipped()
-
-                    Spacer(minLength: 0)
-
-                    NovaAvatarView(size: 34, isActive: state.isHovered || state.isDragging)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open NOVA Copilot")
         }
         .padding(.horizontal, 10)
         .frame(width: 176, height: 56)
@@ -252,7 +250,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private var edgeHandleDragStartY: CGFloat = 0
 
     private let edgeHandlePositionKey = "NOVAEdgeHandleVerticalPosition"
-    private let edgeHandleCollapsedPeek: CGFloat = 24
+    private let edgeHandleCollapsedPeek: CGFloat = 48
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -632,7 +630,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private func setEdgeHandleHovered(_ hovered: Bool) {
         guard edgeHandlePanel.isVisible,
               let screen = edgeHandleScreen ?? screenUnderPointer() else { return }
-        let visibleWidth = hovered ? edgeHandlePanel.frame.width - 10 : edgeHandleCollapsedPeek
+        let visibleWidth = hovered ? edgeHandlePanel.frame.width : edgeHandleCollapsedPeek
         let target = edgeHandleOrigin(on: screen, visibleWidth: visibleWidth)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = hovered ? 0.28 : 0.22
@@ -652,7 +650,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         let maximumY = max(minimumY, visibleFrame.maxY - edgeHandlePanel.frame.height - 10)
         let y = min(max(edgeHandleDragStartY - translationY, minimumY), maximumY)
         let visibleWidth = edgeHandleViewState.isHovered
-            ? edgeHandlePanel.frame.width - 10
+            ? edgeHandlePanel.frame.width
             : edgeHandleCollapsedPeek
         edgeHandlePanel.setFrameOrigin(NSPoint(x: visibleFrame.maxX - visibleWidth, y: y))
     }
