@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS" src="https://img.shields.io/badge/macOS-1.6.6-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.6.6 combines coding, Word documents and reviewed local tools in CS Agent.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.6/NOVA-Copilot-1.6.6.dmg"><strong>↓ Latest published Mac app · 1.6.6 DMG</strong></a></p>
+  <p><img alt="macOS" src="https://img.shields.io/badge/macOS-1.6.7-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Version 1.6.7 fixes startup on ad-hoc signed builds by keeping hardened-runtime library validation off.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.7/NOVA-Copilot-1.6.7.dmg"><strong>↓ Latest published Mac app · 1.6.7 DMG</strong></a></p>
 </div>
 
 ---
@@ -44,7 +44,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the latest published Mac app DMG (1.6.6)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.6/NOVA-Copilot-1.6.6.dmg).
+1. [Download the latest published Mac app DMG (1.6.7)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.7/NOVA-Copilot-1.6.7.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 
@@ -70,6 +70,8 @@ Google sign-in uses Supabase Auth and a system browser. The first project setup 
 1. Open `NOVA Copilot.xcodeproj` in Xcode.
 2. Select the **NOVA Copilot** scheme and **My Mac** as the destination.
 3. Choose a signing team under **Signing & Capabilities**, then build with **⌘B** or run with **⌘R**.
+
+To create the ad-hoc signed release package, run `scripts/package-macos-release.sh <output-directory>`. It deliberately leaves the app outside Hardened Runtime library validation because this distribution has no Developer ID Team ID; Sparkle's nested helpers keep their own signatures.
 
 Backend: `https://nova-copilot-gateway.vercel.app/api/chat`
 

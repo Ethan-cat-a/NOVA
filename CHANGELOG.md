@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.6.7 (2026-11-14)
+
+- Fixes startup crashes on ad-hoc signed builds by not enabling the Hardened Runtime's library validation for the embedded Sparkle framework.
+- Adds a repeatable macOS packaging script that preserves Sparkle's nested helper signatures and verifies the app bundle signature.
+- Bumps the Mac marketing version to 1.6.7 and build number to 27.
+
 # NOVA Copilot for Windows Version 1.5.3 (2026-11-14)
 
 - Fixes startup failure caused by Tk parsing the space in `Segoe UI` as a font-size separator.
