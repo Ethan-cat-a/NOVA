@@ -1,6 +1,6 @@
 # NOVA Copilot Gateway
 
-Private server-side gateway for NOVA Copilot. It validates Supabase sessions, enforces the existing NOVA usage limits, routes each chat mode to an OpenRouter free model, and streams only the final answer text to the Mac app.
+Private server-side gateway for NOVA Copilot. It validates Supabase sessions, enforces the existing NOVA usage limits, routes each chat mode to an OpenRouter free model, and streams response text to the Mac app as it arrives.
 
 ## Model routing
 
@@ -20,8 +20,9 @@ CS Agent is the only mode that receives server tool definitions. The server-side
 
 - `calculate`: evaluates bounded arithmetic without using `eval` or executing code.
 - `search_selected_documents`: searches excerpts from files attached or selected for the current chat. It cannot enumerate or read other files or folders.
+- `github_public_read`: searches public repositories and reads public repository metadata, files, issues and pull requests. It cannot access private repositories or write to GitHub.
 
-The gateway runs at most two tool rounds and four tool executions per chat request, then asks the model for a final answer without tools. Tool results are treated as source material. To add another server-deployed plugin, add a validated schema and executor to the registry and document the data it can access. Plugins are not dynamically downloaded or installed by users. The Mac app provides separate opt-in local integrations for a selected project folder, read-only Git summary, reviewed Chrome page text and app handoffs to Xcode and Microsoft Word. Those local integrations do not run through this gateway.
+The gateway runs at most two tool rounds and four tool executions per chat request, then asks the model for a final answer without tools. Tool results are treated as source material. To add another server-deployed plugin, add a validated schema and executor to the registry and document the data it can access. Plugins are not dynamically downloaded or installed by users. Google Search is a free, explicit handoff to Chrome; the gateway does not call a hosted web-search service. The Mac app provides separate opt-in local integrations for a selected project folder, read-only Git summary, reviewed Chrome page text and app handoffs to Xcode and Microsoft Word. Those local integrations do not run through this gateway.
 
 ## Deployment
 

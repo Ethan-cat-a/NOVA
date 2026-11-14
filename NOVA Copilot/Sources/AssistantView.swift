@@ -13,6 +13,7 @@ struct AssistantView: View {
 
     @FocusState private var inputFocused: Bool
     @State private var isConversationAtBottom = true
+    @State private var isUserScrollingConversation = false
     @State private var conversationViewportBottomY: CGFloat = .infinity
     @State private var conversationContentBottomY: CGFloat = .infinity
     @State private var showsUpdateNotes = false
@@ -407,11 +408,16 @@ struct AssistantView: View {
                                     message: message,
                                     accent: accent,
                                     isStreaming: model.streamingMessageID == message.id,
+                                    streamBuffer: model.responseStreamBuffer(for: message.id),
                                     canRetry: model.canRetryResponse(message.id),
                                     onCopy: { copyResponse(message.content) },
                                     onCopyCode: { copyCodeBlock($0) },
                                     onRetry: { model.retryResponse(message.id) },
-                                    onSaveWord: { viewState.wordDraftReview = WordDraftReview(text: message.content) }
+                                    onSaveWord: { viewState.wordDraftReview = WordDraftReview(text: message.content) },
+                                    onStreamTextUpdate: {
+                                        guard isConversationAtBottom else { return }
+                                        proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                                    }
                                 )
                                     .id(message.id)
                             }
@@ -431,6 +437,10 @@ struct AssistantView: View {
                     .padding(.horizontal, 15)
                     .padding(.top, 17)
                     .padding(.bottom, 15)
+                    .background {
+                        ConversationScrollObserver(onScroll: handleConversationScroll)
+                            .frame(width: 0, height: 0)
+                    }
                 }
                 .scrollIndicators(.visible)
                 .background {
@@ -454,12 +464,6 @@ struct AssistantView: View {
                     withAnimation(.easeOut(duration: 0.18)) {
                         proxy.scrollTo("conversation-bottom", anchor: .bottom)
                     }
-                }
-                .onChange(of: model.currentThread.messages.last?.content) { content in
-                    guard content != nil,
-                          isConversationAtBottom,
-                          model.streamingMessageID == model.currentThread.messages.last?.id else { return }
-                    proxy.scrollTo("conversation-bottom", anchor: .bottom)
                 }
                 .onChange(of: model.activeThreadID) { _ in
                     isConversationAtBottom = true
@@ -498,11 +502,19 @@ struct AssistantView: View {
 
     private func updateConversationScrollPosition() {
         guard conversationViewportBottomY.isFinite,
-              conversationContentBottomY.isFinite else { return }
+              conversationContentBottomY.isFinite,
+              !model.isSending || isUserScrollingConversation else { return }
         let isAtBottom = conversationContentBottomY <= conversationViewportBottomY + 64
         guard isConversationAtBottom != isAtBottom else { return }
-        withAnimation(.easeOut(duration: 0.15)) {
-            isConversationAtBottom = isAtBottom
+        isConversationAtBottom = isAtBottom
+    }
+
+    private func handleConversationScroll() {
+        isUserScrollingConversation = true
+        updateConversationScrollPosition()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            updateConversationScrollPosition()
+            isUserScrollingConversation = false
         }
     }
 
@@ -1842,15 +1854,80 @@ private struct ConversationContentBottomPreferenceKey: PreferenceKey {
     }
 }
 
+private struct ConversationScrollObserver: NSViewRepresentable {
+    let onScroll: () -> Void
+
+    func makeNSView(context: Context) -> ConversationScrollObserverView {
+        ConversationScrollObserverView(onScroll: onScroll)
+    }
+
+    func updateNSView(_ nsView: ConversationScrollObserverView, context: Context) {
+        nsView.onScroll = onScroll
+        nsView.observeEnclosingScrollView()
+    }
+}
+
+private final class ConversationScrollObserverView: NSView {
+    var onScroll: () -> Void
+    private weak var observedClipView: NSClipView?
+    private var boundsObserver: NSObjectProtocol?
+
+    init(onScroll: @escaping () -> Void) {
+        self.onScroll = onScroll
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        observeEnclosingScrollView()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        observeEnclosingScrollView()
+    }
+
+    func observeEnclosingScrollView() {
+        var candidate = superview
+        while let view = candidate, !(view is NSScrollView) {
+            candidate = view.superview
+        }
+        guard let scrollView = candidate as? NSScrollView else { return }
+        let clipView = scrollView.contentView
+        guard clipView !== observedClipView else { return }
+
+        if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
+        observedClipView = clipView
+        clipView.postsBoundsChangedNotifications = true
+        boundsObserver = NotificationCenter.default.addObserver(
+            forName: NSView.boundsDidChangeNotification,
+            object: clipView,
+            queue: .main
+        ) { [weak self] _ in
+            self?.onScroll()
+        }
+    }
+
+    deinit {
+        if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
+    }
+}
+
 private struct MessageBubble: View {
     let message: ChatMessage
     let accent: Color
     let isStreaming: Bool
+    let streamBuffer: NovaResponseStreamBuffer?
     let canRetry: Bool
     let onCopy: () -> Void
     let onCopyCode: (String) -> Void
     let onRetry: () -> Void
     let onSaveWord: () -> Void
+    let onStreamTextUpdate: () -> Void
     @State private var isHovered = false
     @State private var areSourceDetailsExpanded = false
 
@@ -1871,12 +1948,8 @@ private struct MessageBubble: View {
                 if !isUser {
                     Text("NOVA V8").font(.system(size: 9, weight: .bold)).tracking(0.7).foregroundStyle(Color.secondary)
                 }
-                if message.content.isEmpty && !isUser && isStreaming {
-                    HStack(spacing: 5) {
-                        ProgressView().controlSize(.small).scaleEffect(0.7)
-                        Text("NOVA is thinking…").font(.system(size: 12)).foregroundStyle(Color.secondary)
-                    }
-                    .padding(.vertical, 4)
+                if !isUser && isStreaming, let streamBuffer {
+                    StreamingResponseText(buffer: streamBuffer, onTextUpdate: onStreamTextUpdate)
                 } else if !isUser && !isStreaming {
                     MarkdownResponseView(content: message.content, accent: accent, onCopyCode: onCopyCode)
                         .font(.system(size: 12.5))
@@ -1889,7 +1962,7 @@ private struct MessageBubble: View {
                         .font(.system(size: 12.5))
                         .lineSpacing(3)
                         .textSelection(.enabled)
-                        .foregroundStyle(isUser ? Color.white : Color.primary)
+                        .foregroundColor(isUser ? .white : Color(nsColor: .labelColor))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityAction(named: Text("Copy response")) {
                             if !isUser { onCopy() }
@@ -1976,6 +2049,32 @@ private struct MessageBubble: View {
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.12), value: isHovered)
+    }
+}
+
+private struct StreamingResponseText: View {
+    @ObservedObject var buffer: NovaResponseStreamBuffer
+    let onTextUpdate: () -> Void
+
+    var body: some View {
+        Group {
+            if buffer.text.isEmpty {
+                HStack(spacing: 5) {
+                    ProgressView().controlSize(.small).scaleEffect(0.7)
+                    Text("NOVA is thinking…").font(.system(size: 12)).foregroundStyle(Color.secondary)
+                }
+                .padding(.vertical, 4)
+            } else {
+                Text(buffer.text)
+                    .font(.system(size: 12.5))
+                    .lineSpacing(3)
+                    .textSelection(.enabled)
+                    .foregroundColor(Color(nsColor: .labelColor))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel(buffer.text)
+            }
+        }
+        .onChange(of: buffer.text) { _ in onTextUpdate() }
     }
 }
 

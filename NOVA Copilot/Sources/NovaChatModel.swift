@@ -3,6 +3,37 @@ import Combine
 import Foundation
 
 @MainActor
+final class NovaResponseStreamBuffer: ObservableObject {
+    @Published private(set) var text = ""
+
+    private var pendingText = ""
+    private var flushTask: Task<Void, Never>?
+
+    func append(_ chunk: String) {
+        guard !chunk.isEmpty else { return }
+        pendingText.append(chunk)
+        guard flushTask == nil else { return }
+
+        let delay: UInt64 = text.count < 2_000 ? 25_000_000 : (text.count < 8_000 ? 45_000_000 : 65_000_000)
+        flushTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
+            guard !Task.isCancelled else { return }
+            self?.flush()
+        }
+    }
+
+    func flush() {
+        flushTask?.cancel()
+        flushTask = nil
+        guard !pendingText.isEmpty else { return }
+        text.append(pendingText)
+        pendingText = ""
+    }
+
+    var completeText: String { text + pendingText }
+}
+
+@MainActor
 final class NovaChatModel: ObservableObject {
     @Published private(set) var threads: [ChatThread] = []
     @Published private(set) var activeThreadID: UUID
@@ -19,6 +50,12 @@ final class NovaChatModel: ObservableObject {
     private var requestTask: Task<Void, Never>?
     private var failedRequest: RetryableRequest?
     private var retryableRequests: [UUID: RetryableRequest] = [:]
+    private var responseStreams: [UUID: NovaResponseStreamBuffer] = [:]
+    private var streamCheckpointTask: Task<Void, Never>?
+
+    func responseStreamBuffer(for messageID: UUID) -> NovaResponseStreamBuffer? {
+        responseStreams[messageID]
+    }
 
     private struct RetryableRequest {
         let threadID: UUID
@@ -437,9 +474,21 @@ final class NovaChatModel: ObservableObject {
         )
         discardRetryableRequests(in: threadID)
         retryableRequests[responseID] = retryableRequest
+        let streamBuffer = NovaResponseStreamBuffer()
+        responseStreams[responseID] = streamBuffer
+        streamCheckpointTask?.cancel()
+        streamCheckpointTask = Task { [weak self, weak streamBuffer] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled, let self, let streamBuffer,
+                      self.streamingMessageID == responseID else { return }
+                self.persistStreamCheckpoint(streamBuffer, messageID: responseID, threadID: threadID)
+            }
+        }
         streamingMessageID = responseID
         isSending = true
         connectionStatus = "Nova is thinking…"
+        save()
 
         let thread = threads.first(where: { $0.id == threadID }) ?? currentThread
         let generalAnswerInstruction = makeWordDocument
@@ -472,6 +521,7 @@ final class NovaChatModel: ObservableObject {
                     guard let self else { return }
                     self.appendText(delta, to: responseID, threadID: threadID)
                 }
+                self.flushStreamIntoMessage(responseID, threadID: threadID)
                 if makeWordDocument {
                     self.updateMessage(responseID, threadID: threadID) { message in
                         if !message.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -481,17 +531,22 @@ final class NovaChatModel: ObservableObject {
                 }
                 self.finishResponse(responseID, threadID: threadID, error: nil)
             } catch is CancellationError {
+                self.flushStreamIntoMessage(responseID, threadID: threadID)
                 self.updateMessage(responseID, threadID: threadID) { message in
                     if message.content.isEmpty { message.content = "Response stopped." }
                 }
                 self.finishResponse(responseID, threadID: threadID, error: nil)
                 self.connectionStatus = "Response stopped"
             } catch {
+                self.flushStreamIntoMessage(responseID, threadID: threadID)
                 self.finishResponse(responseID, threadID: threadID, error: error.localizedDescription)
                 self.failedRequest = retryableRequest
             }
             self.isSending = false
             self.streamingMessageID = nil
+            self.streamCheckpointTask?.cancel()
+            self.streamCheckpointTask = nil
+            self.responseStreams.removeValue(forKey: responseID)
             self.requestTask = nil
             if self.isConnected && self.lastError == nil { self.connectionStatus = "Nova V8 connected" }
         }
@@ -508,6 +563,7 @@ final class NovaChatModel: ObservableObject {
     func clearDisplayedError() { lastError = nil }
 
     private func finishResponse(_ messageID: UUID, threadID: UUID, error: String?) {
+        flushStreamIntoMessage(messageID, threadID: threadID)
         if let error {
             lastError = error
             updateMessage(messageID, threadID: threadID) { message in
@@ -531,7 +587,22 @@ final class NovaChatModel: ObservableObject {
 
     private func appendText(_ text: String, to messageID: UUID, threadID: UUID) {
         guard !text.isEmpty else { return }
-        updateMessage(messageID, threadID: threadID) { $0.content += text }
+        responseStreams[messageID]?.append(text)
+    }
+
+    private func flushStreamIntoMessage(_ messageID: UUID, threadID: UUID) {
+        guard let stream = responseStreams[messageID] else { return }
+        stream.flush()
+        let completeText = stream.completeText
+        updateMessage(messageID, threadID: threadID) { $0.content = completeText }
+    }
+
+    private func persistStreamCheckpoint(_ stream: NovaResponseStreamBuffer, messageID: UUID, threadID: UUID) {
+        let content = stream.completeText
+        guard !content.isEmpty,
+              let message = threads.first(where: { $0.id == threadID })?.messages.first(where: { $0.id == messageID }),
+              message.content != content else { return }
+        updateMessage(messageID, threadID: threadID) { $0.content = content }
         save()
     }
 

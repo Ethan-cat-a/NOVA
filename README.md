@@ -3,7 +3,7 @@
   <h1>NOVA COPILOT</h1>
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
-  <p><strong>macOS version 1.6.7</strong> fixes launch failures caused by hardened-runtime library validation on ad-hoc signed builds.</p>
+  <p><strong>macOS source version 1.6.8</strong> improves CS Agent streaming and adds read-only public GitHub lookups. The latest published Mac download is still 1.6.7.</p>
   <p>
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.7/NOVA-Copilot-1.6.7.dmg"><strong>Download latest macOS app · 1.6.7 DMG</strong></a>
     &nbsp; · &nbsp;
@@ -12,7 +12,7 @@
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS source" src="https://img.shields.io/badge/macOS-1.6.7-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="macOS source" src="https://img.shields.io/badge/source-1.6.8-263C63?style=flat-square&logo=apple&logoColor=white" />
     <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.3-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
@@ -26,7 +26,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Source version 1.6.7 · Native Swift / AppKit</strong></p>
+      <p><strong>Source version 1.6.8 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with a menu-bar control, floating assistant panel and quick keyboard access.</p>
       <ul>
         <li>Chat as a guest with optional Google or email/password sign-in</li>
@@ -44,6 +44,8 @@
         <li>Optionally search PDFs, Word, RTF, Markdown, text and source-code files in folders you choose, one message at a time</li>
         <li>Document search runs locally; at most four relevant excerpts are sent only when you enable it</li>
         <li>CS Agent combines coding help, Word drafts and the existing allowlisted Agent plugins</li>
+        <li>Read-only public GitHub repository, file, issue and pull request lookups; no private-repository or write access</li>
+        <li>CS Agent replies stream as they arrive with batched rendering and periodic chat-history saves</li>
         <li>Include read-only Git status for a selected repository on a single request</li>
         <li>Open a Google Search in Chrome or share the current page after reviewing its extracted text; open projects in Xcode or Microsoft Word</li>
         <li>Local tools cannot modify project files, run arbitrary commands, commit or push changes, or install third-party plugins</li>
@@ -73,7 +75,7 @@
   </tr>
 </table>
 
-> Version 1.6.7 is the latest macOS release. Version 1.5.3 is the latest Windows release.
+> Version 1.6.8 is the current macOS source. Version 1.6.7 is the latest published macOS download. Version 1.5.3 is the latest Windows release.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 

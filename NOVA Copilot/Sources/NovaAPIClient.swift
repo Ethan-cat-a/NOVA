@@ -90,7 +90,7 @@ final class NovaAPIClient {
         for try await byte in bytes {
             try Task.checkCancellation()
             buffer.append(byte)
-            if buffer.count >= 28 || byte == 10 {
+            if buffer.count >= 8 || byte == 10 {
                 let safeCount = Self.completeUTF8PrefixLength(in: buffer)
                 if safeCount > 0 {
                     let prefix = buffer.prefix(safeCount)

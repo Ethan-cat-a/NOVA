@@ -2,8 +2,8 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS" src="https://img.shields.io/badge/macOS-1.6.7-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.6.7 fixes startup on ad-hoc signed builds by keeping hardened-runtime library validation off.</p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/source-1.6.8-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Source version 1.6.8 improves CS Agent streaming and adds read-only public GitHub lookups. The latest published Mac app is still 1.6.7.</p>
   <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.7/NOVA-Copilot-1.6.7.dmg"><strong>↓ Latest published Mac app · 1.6.7 DMG</strong></a></p>
 </div>
 
@@ -32,7 +32,10 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 - CS Agent combines coding help, Word document creation/filling and Agent tools. Existing chats in Coding, Word Doc and Agent modes migrate to CS Agent.
 - **Git status** can include a read-only summary for a selected repository when you opt in for a message. No file contents are read by Git; My Documents search remains a separate opt-in.
 - **Google Chrome** can open a Google Search for your question or share the current page after macOS access is allowed. NOVA extracts the page text locally and shows a preview; only the reviewed text is sent when you submit your message.
-- The CS Agent apps menu opens a selected project in Xcode or Microsoft Word. The allowlisted server plugins still provide calculator and selected-document search. NOVA does not edit files, run arbitrary commands, commit/push changes or install third-party plugins.
+- The CS Agent apps menu opens a selected project in Xcode or Microsoft Word. Allowlisted server plugins provide calculator, selected-document search and read-only public GitHub lookups. NOVA does not edit files, run arbitrary commands, commit/push changes or install third-party plugins.
+- CS Agent can search public GitHub repositories and read public files, issues and pull requests. Access is read-only and does not reach private repositories.
+- Google Search remains a free, explicit handoff to Chrome; NOVA does not invoke a paid hosted web-search service.
+- CS Agent text now streams as the gateway receives it. Batched display updates, periodic history saves and live system-colored text reduce typing lag, scrolling churn and the brief white-text flash.
 - Without the per-message **My Documents** option, no text from the saved folders is sent. Document contents are not added to saved chat history.
 - Screen and window capture uses the macOS 14+ system picker; image and PDF import works on macOS 13+.
 - Import `.docx` or `.doc` files for text context. In CS Agent, choose **Make next reply a Word file** to create or fill a document, then review, edit and save the result as `.docx`.
@@ -44,7 +47,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the latest published Mac app DMG (1.6.7)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.7/NOVA-Copilot-1.6.7.dmg).
+1. [Download the latest published Mac app DMG (1.6.7)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.7/NOVA-Copilot-1.6.7.dmg). Source version 1.6.8 is not published as an app download yet.
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 

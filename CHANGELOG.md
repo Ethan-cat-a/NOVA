@@ -1,3 +1,12 @@
+# NOVA Copilot for macOS Version 1.6.8 (2026-11-14)
+
+- Adds read-only GitHub access for searching public repositories and reading public files, issues and pull requests; private repositories and write operations are not supported.
+- Keeps Google Search as a user-triggered handoff to Chrome and removes paid hosted web-search calls.
+- Streams CS Agent text as soon as it arrives instead of waiting for tool rounds to finish; batches display updates and saves history periodically to reduce typing and scrolling lag.
+- Uses the system label color for live replies to prevent the brief white-text flash in light appearance.
+- Keeps Word document creation and fill-in requests in the existing review-before-save flow.
+- Bumps the Mac marketing version to 1.6.8 and build number to 28.
+
 # NOVA Copilot for macOS Version 1.6.7 (2026-11-14)
 
 - Fixes startup crashes on ad-hoc signed builds by not enabling the Hardened Runtime's library validation for the embedded Sparkle framework.

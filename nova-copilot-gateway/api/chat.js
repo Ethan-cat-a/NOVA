@@ -234,14 +234,14 @@ function openRouterErrorMessage(error, statusCode) {
   return "OpenRouter could not complete the request.";
 }
 
-async function readOpenRouterCompletion(upstream) {
+async function readOpenRouterCompletion(upstream, onText) {
   const decoder = new StringDecoder("utf8");
   let pending = "";
   let content = "";
   let finishReason = null;
   const toolCalls = new Map();
 
-  const readLine = (line) => {
+  const readLine = async (line) => {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) return;
     const data = trimmed.slice("data:".length).trim();
@@ -258,7 +258,9 @@ async function readOpenRouterCompletion(upstream) {
     }
     const choice = event.choices?.[0];
     if (!choice) return;
-    content += textContent(choice.delta?.content);
+    const text = textContent(choice.delta?.content);
+    content += text;
+    if (text && onText) await onText(text);
     if (choice.finish_reason) finishReason = choice.finish_reason;
     for (const delta of choice.delta?.tool_calls || []) {
       const index = Number.isInteger(delta.index) ? delta.index : toolCalls.size;
@@ -278,10 +280,10 @@ async function readOpenRouterCompletion(upstream) {
     pending += decoder.write(chunk);
     const lines = pending.split(/\r?\n/);
     pending = lines.pop() || "";
-    for (const line of lines) readLine(line);
+    for (const line of lines) await readLine(line);
   }
   pending += decoder.end();
-  if (pending) readLine(pending);
+  if (pending) await readLine(pending);
 
   return {
     content,
@@ -296,7 +298,7 @@ async function readOpenRouterCompletion(upstream) {
   };
 }
 
-async function requestOpenRouterCompletion(payload, signal, onResponse) {
+async function requestOpenRouterCompletion(payload, signal, onResponse, onText) {
   const startedAt = performance.now();
   const upstream = await requestHTTPS(OPENROUTER_CHAT_URL, {
     method: "POST",
@@ -318,10 +320,10 @@ async function requestOpenRouterCompletion(payload, signal, onResponse) {
     const error = parsed.error || parsed;
     throw Object.assign(new Error(openRouterErrorMessage(error, upstream.statusCode)), { status: upstream.statusCode || 502 });
   }
-  return { upstream, ...(await readOpenRouterCompletion(upstream)) };
+  return { upstream, ...(await readOpenRouterCompletion(upstream, onText)) };
 }
 
-async function runAgentLoop(basePayload, sourceMessages, signal, onResponse) {
+async function runAgentLoop(basePayload, sourceMessages, signal, onResponse, onText) {
   const messages = [...basePayload.messages];
   const tools = listAgentTools();
   let toolsExecuted = 0;
@@ -333,7 +335,7 @@ async function runAgentLoop(basePayload, sourceMessages, signal, onResponse) {
       messages,
       tools,
       tool_choice: "auto",
-    }, signal, onResponse);
+    }, signal, onResponse, onText);
     lastUpstream = completion.upstream;
     if (!completion.toolCalls.length) return { content: completion.content, upstream: lastUpstream };
 
@@ -374,22 +376,8 @@ async function runAgentLoop(basePayload, sourceMessages, signal, onResponse) {
   }
 
   const finalPayload = { ...basePayload, messages };
-  const final = await requestOpenRouterCompletion(finalPayload, signal, onResponse);
+  const final = await requestOpenRouterCompletion(finalPayload, signal, onResponse, onText);
   return { content: final.content, upstream: final.upstream || lastUpstream };
-}
-
-async function writeAgentAnswer(content, res) {
-  const characters = Array.from(content || "");
-  if (!characters.length) {
-    res.write("I couldn’t complete the agent steps. Please try again.");
-    return;
-  }
-  for (let index = 0; index < characters.length; index += 64) {
-    if (!res.write(characters.slice(index, index + 64).join(""))) {
-      await new Promise((resolve) => res.once("drain", resolve));
-    }
-    await new Promise((resolve) => setImmediate(resolve));
-  }
 }
 
 module.exports = async function handler(req, res) {
@@ -509,20 +497,37 @@ module.exports = async function handler(req, res) {
     res.once("close", onClientDisconnect);
     try {
       if (route.mode === "agent") {
+        let streamedText = false;
+        const streamAgentText = async (text) => {
+          if (!text) return;
+          if (!res.headersSent) {
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "text/plain; charset=utf-8");
+            res.setHeader("X-NOVA-Model", route.model);
+            res.setHeader("X-NOVA-Plan", quota.is_owner ? "owner-unlimited" : "daily-limit");
+            if (Number.isFinite(Number(quota.remaining))) res.setHeader("X-NOVA-Remaining", String(quota.remaining));
+            res.flushHeaders();
+          }
+          if (!res.write(text)) await new Promise((resolve) => res.once("drain", resolve));
+          streamedText = true;
+        };
         const agentResult = await runAgentLoop(
           openRouterPayload,
           payload.messages,
           controller.signal,
           onUpstreamResponse,
+          streamAgentText,
         );
         upstream = agentResult.upstream;
-        res.statusCode = 200;
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.setHeader("X-NOVA-Model", route.model);
-        res.setHeader("X-NOVA-Plan", quota.is_owner ? "owner-unlimited" : "daily-limit");
-        if (Number.isFinite(Number(quota.remaining))) res.setHeader("X-NOVA-Remaining", String(quota.remaining));
-        res.flushHeaders();
-        await writeAgentAnswer(agentResult.content, res);
+        if (!res.headersSent) {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
+          res.setHeader("X-NOVA-Model", route.model);
+          res.setHeader("X-NOVA-Plan", quota.is_owner ? "owner-unlimited" : "daily-limit");
+          if (Number.isFinite(Number(quota.remaining))) res.setHeader("X-NOVA-Remaining", String(quota.remaining));
+          res.flushHeaders();
+        }
+        if (!streamedText) res.write(agentResult.content || "I couldn’t complete the agent steps. Please try again.");
         return res.end();
       }
 
@@ -572,7 +577,13 @@ module.exports = async function handler(req, res) {
       if (upstream && !upstream.complete) upstream.destroy();
     }
   } catch (error) {
-    if (res.headersSent) return res.end();
+    if (res.headersSent) {
+      if (!res.destroyed && !res.writableEnded) {
+        res.write("\n\nNOVA couldn’t finish this reply. Please retry.");
+        return res.end();
+      }
+      return;
+    }
     return sendJSON(res, error.status || 502, { error: error.message || "NOVA V8 could not complete the request." });
   }
 };
