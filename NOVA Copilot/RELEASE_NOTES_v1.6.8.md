@@ -9,4 +9,4 @@
 
 Build 28 · macOS 13 or later
 
-The 1.6.8 source is available on GitHub. The latest published Mac app download remains 1.6.7 until a 1.6.8 release package is published.
+Released as v1.6.8 with a universal DMG and Sparkle update ZIP.
