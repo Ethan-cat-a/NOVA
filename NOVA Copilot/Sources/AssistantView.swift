@@ -174,12 +174,7 @@ struct AssistantView: View {
 
     private var header: some View {
         HStack(spacing: 4) {
-            Image("NOVAIcon")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 36, height: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            NovaAvatarView(size: 36, isActive: model.isSending)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
@@ -1936,11 +1931,7 @@ private struct MessageBubble: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             if !isUser {
-                Image("NOVAIcon")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 24, height: 24)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                NovaAvatarView(size: 24, isActive: isStreaming)
             } else {
                 Spacer(minLength: 26)
             }

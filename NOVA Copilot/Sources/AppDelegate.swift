@@ -48,50 +48,190 @@ private final class EdgeHandlePanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-private struct EdgeHandleView: View {
-    let onOpen: () -> Void
-    @StateObject private var state = EdgeHandleViewState()
+struct NovaAvatarView: View {
+    let size: CGFloat
+    var isActive = false
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isBreathing = false
 
     var body: some View {
-        Button(action: onOpen) {
-            VStack(spacing: 9) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 11, weight: .semibold))
-                Capsule()
-                    .fill(Color.white.opacity(0.38))
-                    .frame(width: 2, height: 26)
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 11, weight: .bold))
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(red: 0.08, green: 0.27, blue: 0.58),
+                            Color(red: 0.015, green: 0.045, blue: 0.14)
+                        ],
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: size * 0.95
+                    )
+                )
+
+            Image("MenuBarIcon")
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .padding(size * 0.16)
+                .shadow(color: Color.cyan.opacity(0.72), radius: size * 0.12)
+
+            HStack(spacing: size * 0.11) {
+                avatarEye
+                avatarEye
             }
-            .foregroundStyle(.white)
-            .frame(width: 36, height: 108)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(red: 0.035, green: 0.06, blue: 0.14).opacity(0.96))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-            )
-            .shadow(
-                color: Color.cyan.opacity(state.isHovered ? 0.42 : 0.22),
-                radius: state.isHovered ? 18 : 10,
-                x: -5,
-                y: 0
-            )
-            .scaleEffect(state.isHovered ? 1.06 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: state.isHovered)
+            .offset(y: size * 0.16)
+
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.72), Color.cyan.opacity(0.24), Color.white.opacity(0.5)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: max(0.8, size * 0.035)
+                )
+
+            Circle()
+                .fill(Color.white.opacity(0.88))
+                .frame(width: size * 0.075, height: size * 0.075)
+                .shadow(color: Color.cyan.opacity(0.9), radius: size * 0.09)
+                .offset(x: size * 0.27, y: -size * 0.25)
         }
-        .buttonStyle(.plain)
-        .onHover { state.isHovered = $0 }
-        .help("Open NOVA Copilot · ⌘⇧Space")
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: max(0.6, size * 0.025)))
+        .shadow(
+            color: Color.cyan.opacity(isActive && isBreathing ? 0.48 : 0.16),
+            radius: isActive && isBreathing ? size * 0.34 : size * 0.14
+        )
+        .scaleEffect(isActive && isBreathing ? 1.045 : 1)
+        .onAppear { updateBreathing(isActive) }
+        .onChange(of: isActive) { updateBreathing($0) }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("NOVA AI avatar")
+    }
+
+    private var avatarEye: some View {
+        Capsule()
+            .fill(Color.white)
+            .frame(width: max(2, size * 0.1), height: max(3.5, size * 0.18))
+            .overlay(Capsule().stroke(Color.blue.opacity(0.65), lineWidth: max(0.45, size * 0.018)))
+            .shadow(color: Color.cyan.opacity(0.85), radius: max(0.8, size * 0.04))
+    }
+
+    private func updateBreathing(_ active: Bool) {
+        guard active, !reduceMotion else {
+            withAnimation(.easeOut(duration: 0.18)) { isBreathing = false }
+            return
+        }
+        withAnimation(.easeInOut(duration: 1.25).repeatForever(autoreverses: true)) {
+            isBreathing = true
+        }
     }
 }
-
 
 @MainActor
 private final class EdgeHandleViewState: ObservableObject {
     @Published var isHovered = false
+    @Published var isDragging = false
+}
+
+private struct EdgeHandleView: View {
+    @ObservedObject var state: EdgeHandleViewState
+    let onOpen: () -> Void
+    let onHoverChanged: (Bool) -> Void
+    let onDragChanged: (CGFloat, Bool) -> Void
+    let onDragEnded: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.58))
+                .frame(width: state.isHovered ? 14 : 0, height: 28)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 4)
+                        .onChanged { value in
+                            let began = !state.isDragging
+                            state.isDragging = true
+                            onDragChanged(value.translation.height, began)
+                        }
+                        .onEnded { _ in
+                            state.isDragging = false
+                            onDragEnded()
+                        }
+                )
+                .help("Drag to reposition NOVA")
+
+            Button(action: onOpen) {
+                HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("NOVA COPILOT")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.55)
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text("Ready when you are")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.62))
+                            .lineLimit(1)
+                    }
+                    .frame(width: state.isHovered ? 82 : 0, alignment: .leading)
+                    .opacity(state.isHovered ? 1 : 0)
+                    .clipped()
+
+                    Spacer(minLength: 0)
+
+                    NovaAvatarView(size: 34, isActive: state.isHovered || state.isDragging)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open NOVA Copilot")
+        }
+        .padding(.horizontal, 10)
+        .frame(width: 176, height: 56)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.035, green: 0.09, blue: 0.22).opacity(0.98),
+                            Color(red: 0.025, green: 0.045, blue: 0.13).opacity(0.98)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(Color.cyan.opacity(state.isHovered ? 0.9 : 0.58))
+                .frame(width: 2, height: state.isHovered ? 30 : 22)
+                .padding(.leading, 4)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.white.opacity(state.isHovered ? 0.3 : 0.18), lineWidth: 1)
+        )
+        .shadow(
+            color: Color.cyan.opacity(state.isHovered ? 0.4 : 0.18),
+            radius: state.isHovered ? 18 : 10,
+            x: -6,
+            y: 0
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .onHover { isHovered in
+            guard state.isHovered != isHovered else { return }
+            state.isHovered = isHovered
+            onHoverChanged(isHovered)
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: state.isHovered)
+        .help("Open NOVA Copilot · drag the grip to reposition")
+    }
 }
 
 @MainActor
@@ -107,6 +247,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private var eventHandlerReference: EventHandlerRef?
     private var isPanelAnimating = false
     private var preferencesWindow: NSWindow?
+    private let edgeHandleViewState = EdgeHandleViewState()
+    private var edgeHandleScreen: NSScreen?
+    private var edgeHandleDragStartY: CGFloat = 0
+
+    private let edgeHandlePositionKey = "NOVAEdgeHandleVerticalPosition"
+    private let edgeHandleCollapsedPeek: CGFloat = 24
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -126,7 +272,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         }
 
         // Leave the assistant tucked away, with both quick access points ready.
-        edgeHandlePanel.orderFrontRegardless()
+        showEdgeHandle(on: screenUnderPointer(), animated: true)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -163,10 +309,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
         let visibleFrame = screen.visibleFrame
         let targetOrigin = panelTargetOrigin(on: screen)
-        let startOrigin = NSPoint(x: visibleFrame.maxX + 22, y: targetOrigin.y)
-        let overshootOrigin = NSPoint(x: targetOrigin.x - 14, y: targetOrigin.y)
+        let startOrigin = NSPoint(x: visibleFrame.maxX + 34, y: targetOrigin.y)
+        let overshootOrigin = NSPoint(x: targetOrigin.x - 10, y: targetOrigin.y)
 
+        edgeHandleViewState.isHovered = false
+        edgeHandleViewState.isDragging = false
         edgeHandlePanel.orderOut(nil)
+        panel.alphaValue = 0
         panel.setFrameOrigin(startOrigin)
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
@@ -175,9 +324,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
         // Slide in with a small spring overshoot, then settle into place.
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.36
-            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.18, 0.88, 0.24, 1.04)
+            context.duration = 0.32
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 0.9, 0.22, 1.04)
             panel.animator().setFrameOrigin(overshootOrigin)
+            panel.animator().alphaValue = 1
         }, completionHandler: { [weak self] in
             guard let self = self else { return }
             NSAnimationContext.runAnimationGroup({ context in
@@ -195,18 +345,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         isPanelAnimating = true
 
         let screen = screenContainingPanel() ?? screenUnderPointer()
-        let exitX = (screen?.visibleFrame.maxX ?? panel.frame.maxX) + 22
+        let exitX = (screen?.visibleFrame.maxX ?? panel.frame.maxX) + 34
         let exitOrigin = NSPoint(x: exitX, y: panel.frame.origin.y)
 
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.26
-            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.4, 0.0, 1.0, 0.6)
+            context.duration = 0.28
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.38, 0.0, 0.82, 0.58)
             panel.animator().setFrameOrigin(exitOrigin)
+            panel.animator().alphaValue = 0.84
         }, completionHandler: { [weak self] in
             guard let self = self else { return }
             self.panel.orderOut(nil)
+            self.panel.alphaValue = 1
             self.isPanelAnimating = false
-            self.showEdgeHandle(on: screen)
+            self.showEdgeHandle(on: screen, animated: true)
         })
     }
 
@@ -359,9 +511,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.isVisible = true
         if let button = statusItem.button {
-            let menuBarImage = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "NOVA Copilot")
-            menuBarImage?.isTemplate = true
-            menuBarImage?.size = NSSize(width: 16, height: 16)
+            let menuBarImage = makeMenuBarAvatarImage()
             button.image = menuBarImage
             button.title = "NOVA"
             button.imagePosition = .imageLeading
@@ -371,12 +521,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         }
     }
 
+    private func makeMenuBarAvatarImage() -> NSImage? {
+        guard let orbitalMark = NSImage(named: NSImage.Name("MenuBarIcon")) else { return nil }
+        let imageSize = NSSize(width: 18, height: 18)
+        let avatar = NSImage(size: imageSize, flipped: false) { bounds in
+            orbitalMark.draw(
+                in: bounds,
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1,
+                respectFlipped: false,
+                hints: nil
+            )
+
+            let eyeSize = NSSize(width: 1.9, height: 2.8)
+            let eyeSpacing: CGFloat = 2.3
+            let eyeY = bounds.midY - 2.8
+            let eyeOrigins = [
+                bounds.midX - eyeSpacing / 2 - eyeSize.width,
+                bounds.midX + eyeSpacing / 2
+            ]
+            for x in eyeOrigins {
+                let eye = NSBezierPath(ovalIn: NSRect(origin: NSPoint(x: x, y: eyeY), size: eyeSize))
+                NSColor.white.setFill()
+                eye.fill()
+                NSColor(calibratedRed: 0.02, green: 0.08, blue: 0.2, alpha: 0.78).setStroke()
+                eye.lineWidth = 0.45
+                eye.stroke()
+            }
+            return true
+        }
+        avatar.isTemplate = false
+        return avatar
+    }
+
     @objc private func menuBarButtonPressed() {
         togglePanel()
     }
 
     private func createEdgeHandle() {
-        let size = NSSize(width: 48, height: 124)
+        let size = NSSize(width: 184, height: 64)
         edgeHandlePanel = EdgeHandlePanel(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -390,25 +574,97 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         edgeHandlePanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         edgeHandlePanel.isMovableByWindowBackground = false
         edgeHandlePanel.contentView = NSHostingView(rootView: EdgeHandleView(
-            onOpen: { [weak self] in self?.showPanel() }
+            state: edgeHandleViewState,
+            onOpen: { [weak self] in self?.showPanel() },
+            onHoverChanged: { [weak self] hovered in self?.setEdgeHandleHovered(hovered) },
+            onDragChanged: { [weak self] translation, began in
+                self?.updateEdgeHandleDrag(translationY: translation, began: began)
+            },
+            onDragEnded: { [weak self] in self?.finishEdgeHandleDrag() }
         ))
         positionEdgeHandle()
-        edgeHandlePanel.orderFrontRegardless()
     }
 
     private func positionEdgeHandle(on preferredScreen: NSScreen? = nil) {
         guard let screen = preferredScreen ?? screenUnderPointer() else { return }
-        let visibleFrame = screen.visibleFrame
-        let frame = edgeHandlePanel.frame
-        let visibleWidth: CGFloat = 34
-        let x = visibleFrame.maxX - visibleWidth
-        let y = visibleFrame.midY - frame.height / 2
-        edgeHandlePanel.setFrameOrigin(NSPoint(x: x, y: y))
+        edgeHandleScreen = screen
+        edgeHandlePanel.setFrameOrigin(edgeHandleOrigin(on: screen, visibleWidth: edgeHandleCollapsedPeek))
     }
 
-    private func showEdgeHandle(on screen: NSScreen? = nil) {
-        positionEdgeHandle(on: screen)
+    private func showEdgeHandle(on preferredScreen: NSScreen? = nil, animated: Bool = true) {
+        guard let screen = preferredScreen ?? screenUnderPointer() else { return }
+        edgeHandleScreen = screen
+        edgeHandleViewState.isHovered = false
+        edgeHandleViewState.isDragging = false
+        let target = edgeHandleOrigin(on: screen, visibleWidth: edgeHandleCollapsedPeek)
+        guard animated else {
+            edgeHandlePanel.setFrameOrigin(target)
+            edgeHandlePanel.alphaValue = 1
+            edgeHandlePanel.orderFrontRegardless()
+            return
+        }
+
+        edgeHandlePanel.setFrameOrigin(NSPoint(
+            x: screen.visibleFrame.maxX + 12,
+            y: target.y
+        ))
+        edgeHandlePanel.alphaValue = 0
         edgeHandlePanel.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.36
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.18, 0.92, 0.22, 1.02)
+            edgeHandlePanel.animator().setFrameOrigin(target)
+            edgeHandlePanel.animator().alphaValue = 1
+        })
+    }
+
+    private func edgeHandleOrigin(on screen: NSScreen, visibleWidth: CGFloat) -> NSPoint {
+        let visibleFrame = screen.visibleFrame
+        let frame = edgeHandlePanel.frame
+        let minimumY = visibleFrame.minY + 10
+        let maximumY = max(minimumY, visibleFrame.maxY - frame.height - 10)
+        let savedPosition = UserDefaults.standard.object(forKey: edgeHandlePositionKey) as? Double ?? 0.5
+        let normalizedPosition = min(max(savedPosition, 0), 1)
+        let y = minimumY + (maximumY - minimumY) * normalizedPosition
+        return NSPoint(x: visibleFrame.maxX - visibleWidth, y: y)
+    }
+
+    private func setEdgeHandleHovered(_ hovered: Bool) {
+        guard edgeHandlePanel.isVisible,
+              let screen = edgeHandleScreen ?? screenUnderPointer() else { return }
+        let visibleWidth = hovered ? edgeHandlePanel.frame.width - 10 : edgeHandleCollapsedPeek
+        let target = edgeHandleOrigin(on: screen, visibleWidth: visibleWidth)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = hovered ? 0.28 : 0.22
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 0.86, 0.24, 1.0)
+            edgeHandlePanel.animator().setFrameOrigin(target)
+        }
+    }
+
+    private func updateEdgeHandleDrag(translationY: CGFloat, began: Bool) {
+        guard let screen = edgeHandleScreen ?? screenUnderPointer() else { return }
+        if began {
+            edgeHandleDragStartY = edgeHandlePanel.frame.origin.y
+        }
+
+        let visibleFrame = screen.visibleFrame
+        let minimumY = visibleFrame.minY + 10
+        let maximumY = max(minimumY, visibleFrame.maxY - edgeHandlePanel.frame.height - 10)
+        let y = min(max(edgeHandleDragStartY - translationY, minimumY), maximumY)
+        let visibleWidth = edgeHandleViewState.isHovered
+            ? edgeHandlePanel.frame.width - 10
+            : edgeHandleCollapsedPeek
+        edgeHandlePanel.setFrameOrigin(NSPoint(x: visibleFrame.maxX - visibleWidth, y: y))
+    }
+
+    private func finishEdgeHandleDrag() {
+        guard let screen = edgeHandleScreen else { return }
+        let visibleFrame = screen.visibleFrame
+        let minimumY = visibleFrame.minY + 10
+        let maximumY = max(minimumY, visibleFrame.maxY - edgeHandlePanel.frame.height - 10)
+        let range = maximumY - minimumY
+        let position = range > 0 ? (edgeHandlePanel.frame.origin.y - minimumY) / range : 0.5
+        UserDefaults.standard.set(Double(position), forKey: edgeHandlePositionKey)
     }
 
     private func createPanel() {
