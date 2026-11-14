@@ -1,3 +1,11 @@
+# NOVA Copilot for macOS Version 1.6.5 (2026-11-14)
+
+- Adds an opt-in Agent mode powered by Nemotron 3 Ultra with a bounded OpenRouter tool-call loop.
+- Adds a modular server-side plugin registry with calculator and selected-document search tools; it cannot access unselected files, modify files, run shell commands or control other apps.
+- Limits each agent reply to two tool rounds and four executed tool calls, and keeps generated reasoning out of the visible response.
+- Routes Hard Thinker to NVIDIA Nemotron 3 Ultra and improves 429 messages to distinguish provider capacity from OpenRouter rate limits where metadata is available.
+- Bumps the Mac marketing version to 1.6.5 and build number to 25.
+
 # NOVA Copilot for macOS Version 1.6.0 (2026-11-10)
 
 - Adds an optional My Documents library: choose folders once, then explicitly enable a one-message search when you want NOVA to use them.

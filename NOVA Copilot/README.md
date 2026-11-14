@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.6.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.6.0 adds optional, on-demand search across document folders you choose.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.0/NOVA-Copilot-1.6.0.dmg"><strong>↓ Download Mac app · 1.6.0 DMG</strong></a></p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.6.5-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Source version 1.6.5 adds Agent mode with bounded tool use for calculations and search in selected documents.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.5/NOVA-Copilot-1.6.5.dmg"><strong>↓ Download Mac app · 1.6.5 DMG</strong></a></p>
 </div>
 
 ---
@@ -17,7 +17,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 | **Stay in your flow** | **Choose how to think** | **Keep control** |
 | --- | --- | --- |
-| Menu-bar access, a floating panel, animated right-edge launcher and manual update button. | Fast, Hard Thinker and Coding modes, plus one-click summary and rewrite actions for copied text. | Review text extracted from screenshots, images or PDFs before sending it to NOVA. |
+| Menu-bar access, a floating panel, animated right-edge launcher and manual update button. | Fast, Hard Thinker, Coding, Word Doc and Agent modes, plus one-click summary and rewrite actions for copied text. | Review text extracted from screenshots, images or PDFs before sending it to NOVA. |
 
 - Streaming responses stay in view while you’re at the bottom; use **Latest** to return after scrolling up.
 - Retry a failed reply without losing the next message draft you’re writing.
@@ -29,6 +29,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 - Text extraction for up to five context items total—images, PDFs, Word documents or screen captures—runs locally. Review each item before sending; NOVA receives only the text you approve, not the original files.
 - Completed replies to file-based questions can show a collapsed source-details row with the supplied filenames and PDF pages; NOVA is asked to cite only details present in the extracted text.
 - Add document folders once, then enable **My Documents** for a single request. NOVA searches PDFs, Word, RTF, Markdown and text files locally and sends at most four relevant excerpts only for that request.
+- Agent mode can calculate and search text from files attached or selected for the current chat. Its plugins are server-side and allowlisted; the current tools are read-only and cannot access other folders, change files or run commands.
 - Without the per-message **My Documents** option, no text from the saved folders is sent. Document contents are not added to saved chat history.
 - Screen and window capture uses the macOS 14+ system picker; image and PDF import works on macOS 13+.
 - Import `.docx` or `.doc` files for text context. Choose **Word Doc** mode to create a document or fill an imported one, then review, edit and save the result as `.docx`.
@@ -41,7 +42,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the Mac app DMG (1.6.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.0/NOVA-Copilot-1.6.0.dmg).
+1. [Download the Mac app DMG (1.6.5)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.5/NOVA-Copilot-1.6.5.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 
@@ -53,7 +54,7 @@ Requires **macOS 13 or later**. The universal build supports Apple silicon and I
 
 ## Privacy
 
-- No NOVA/OpenRouter model key is embedded; chat requests go to the NOVA Copilot gateway, which verifies the account and forwards the existing NOVA V8 response.
+- No NOVA/OpenRouter model key is embedded; chat requests go to the NOVA Copilot gateway, which verifies the account and routes the selected mode to its configured model.
 - The Supabase publishable key is used only for account authentication; the access and refresh tokens are stored in macOS Keychain.
 - Chat history stays on your Mac.
 - The document library stores folder access bookmarks on your Mac. Searching and text extraction run locally; only opted-in excerpts are included in that message to NOVA.

@@ -369,7 +369,7 @@ struct AssistantView: View {
                 Text("MODE").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(muted)
                 Picker("Mode", selection: Binding(get: { model.currentMode }, set: { model.setMode($0) })) {
                     ForEach(NovaMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
+                        Text(mode.compactTitle).tag(mode).accessibilityLabel(mode.title)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -387,6 +387,15 @@ struct AssistantView: View {
                         .buttonStyle(.plain)
                         .fontWeight(.semibold)
                         .foregroundStyle(accent)
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(muted)
+            } else if model.currentMode == .agent {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(accent)
+                    Text("Agent can calculate and search text from files attached or selected for this chat. It cannot change files or run commands.")
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .font(.system(size: 10))
                 .foregroundStyle(muted)

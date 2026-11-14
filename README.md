@@ -3,16 +3,16 @@
   <h1>NOVA COPILOT</h1>
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
-  <p><strong>Mac source version 1.6.0</strong> adds optional, on-demand search across document folders you choose.</p>
+  <p><strong>Mac source version 1.6.5</strong> adds a guarded Agent mode with calculator and selected-document search tools.</p>
   <p>
-    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.0/NOVA-Copilot-1.6.0.dmg"><strong>Download latest macOS app · 1.6.0 DMG</strong></a>
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.5/NOVA-Copilot-1.6.5.dmg"><strong>Download latest macOS app · 1.6.5 DMG</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.2/NOVA-Copilot-Windows-1.5.2.exe"><strong>Download Windows app · 1.5.2</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.6.0-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="macOS source" src="https://img.shields.io/badge/macOS%20source-1.6.5-263C63?style=flat-square&logo=apple&logoColor=white" />
     <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.2-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
@@ -26,7 +26,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Source version 1.6.0 · Native Swift / AppKit</strong></p>
+      <p><strong>Source version 1.6.5 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with a menu-bar control, floating assistant panel and quick keyboard access.</p>
       <ul>
         <li>Chat as a guest with optional Google or email/password sign-in</li>
@@ -44,10 +44,11 @@
         <li>Optionally search PDFs, Word, RTF, Markdown and text files in folders you choose, one message at a time</li>
         <li>Document search runs locally; at most four relevant excerpts are sent only when you enable it</li>
         <li>Word Doc mode formats headings, lists, bold and italics in new .docx files</li>
+        <li>Agent mode calculates and searches only text from files attached or selected for that chat; it cannot change files or run commands</li>
         <li>Answer actions appear on hover, with Copy, Try again and Word export</li>
         <li>Matches the Mac’s light or dark appearance</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.0/NOVA-Copilot-1.6.0.dmg"><strong>↓ Latest Mac release · 1.6.0 DMG</strong></a> · <a href="https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.0">Release notes</a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.6.5/NOVA-Copilot-1.6.5.dmg"><strong>↓ Latest Mac release · 1.6.5 DMG</strong></a> · <a href="https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.5">Release notes</a></p>
       <p><sub>Users on 1.2.0, 1.3.0, or 1.3.1 must install 1.3.2 manually once; users on 1.3.2 can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
@@ -70,7 +71,7 @@
   </tr>
 </table>
 
-> Version 1.6.0 is the latest macOS release. Version 1.5.2 is the latest Windows release.
+> Version 1.6.5 is the latest macOS release. Version 1.5.2 is the latest Windows release.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
@@ -85,8 +86,8 @@
       <p>Bring up a floating assistant with a system-wide shortcut instead of switching tabs.</p>
     </td>
     <td width="33%" valign="top">
-      <h3>✦ Three work modes</h3>
-      <p>Choose Fast, Hard Thinker or Coding to match the task.</p>
+      <h3>✦ Five work modes</h3>
+      <p>Choose Fast, Hard Thinker, Coding, Word Doc or Agent to match the task.</p>
     </td>
     <td width="33%" valign="top">
       <h3>↗ Live responses</h3>
@@ -146,6 +147,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for macOS — 1.6.5](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.5)
 - [NOVA Copilot for macOS — 1.6.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.0)
 - [NOVA Copilot for macOS — 1.5.6](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.6)
 - [NOVA Copilot for macOS — 1.5.2](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.2)
