@@ -47,7 +47,21 @@ fi
 # Keep the outer ad-hoc signature consistent with this non-notarized distribution.
 # Do not use --deep or --options runtime: Sparkle ships separately signed XPC helpers,
 # and library validation cannot validate third-party Team IDs when this app has none.
-codesign --force --sign - --entitlements "$entitlements" --timestamp=none "$app"
+bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")"
+if [[ ! "$bundle_identifier" =~ ^[A-Za-z0-9.-]+$ ]]; then
+  echo "Invalid bundle identifier for Sparkle entitlements: $bundle_identifier" >&2
+  exit 70
+fi
+resolved_entitlements="$(mktemp "$output_dir/.nova-entitlements.XXXXXX.plist")"
+trap 'rm -f "$resolved_entitlements"' EXIT
+sed "s/\\\$(PRODUCT_BUNDLE_IDENTIFIER)/${bundle_identifier}/g" "$entitlements" > "$resolved_entitlements"
+if grep -Fq '$(PRODUCT_BUNDLE_IDENTIFIER)' "$resolved_entitlements"; then
+  echo "Could not resolve the Sparkle XPC service names in the entitlements." >&2
+  exit 70
+fi
+codesign --force --sign - --entitlements "$resolved_entitlements" --timestamp=none "$app"
+rm -f "$resolved_entitlements"
+trap - EXIT
 codesign --verify --deep --strict --verbose=2 "$app"
 
 main_signature="$(codesign -dv --verbose=4 "$app" 2>&1)"
