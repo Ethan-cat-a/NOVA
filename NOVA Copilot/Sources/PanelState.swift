@@ -4,28 +4,16 @@ import ServiceManagement
 
 @MainActor
 final class PanelState: ObservableObject {
-    @Published private(set) var isPinned: Bool
     @Published private(set) var launchAtLogin: Bool
     @Published private(set) var launchLoginError: String?
 
-    var onPinChanged: ((Bool) -> Void)?
-
     init() {
-        isPinned = UserDefaults.standard.object(forKey: "com.novatech.NOVACompanion.pinned") as? Bool ?? true
         if #available(macOS 13.0, *) {
             launchAtLogin = SMAppService.mainApp.status == .enabled
         } else {
             launchAtLogin = false
         }
     }
-
-    func setPinned(_ value: Bool) {
-        isPinned = value
-        UserDefaults.standard.set(value, forKey: "com.novatech.NOVACompanion.pinned")
-        onPinChanged?(value)
-    }
-
-    func togglePinned() { setPinned(!isPinned) }
 
     func clearLaunchLoginError() { launchLoginError = nil }
 

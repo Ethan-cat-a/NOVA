@@ -210,16 +210,6 @@ struct AssistantView: View {
                 .help(model.isConnected ? "Nova connection is ready" : "Click to retry the Nova connection")
             }
             Spacer(minLength: 2)
-            Button { panelState.togglePinned() } label: {
-                Image(systemName: panelState.isPinned ? "pin.fill" : "pin")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(panelState.isPinned ? accent : muted)
-                    .frame(width: 29, height: 29)
-                    .background(panelState.isPinned ? accent.opacity(0.09) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
-            }
-            .buttonStyle(.plain)
-            .help(panelState.isPinned ? "Unpin from top" : "Keep on top")
-
             Button(action: onCheckForUpdates) {
                 HStack(spacing: 5) {
                     Image(systemName: updateStatus.isChecking ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
@@ -318,7 +308,6 @@ struct AssistantView: View {
                     }
                 }
                 Divider()
-                Toggle("Keep on top", isOn: Binding(get: { panelState.isPinned }, set: { panelState.setPinned($0) }))
                 Toggle("Launch at Login", isOn: Binding(get: { panelState.launchAtLogin }, set: { panelState.setLaunchAtLogin($0) }))
                 Button { onShowPreferences() } label: { Label("Preferences…", systemImage: "slider.horizontal.3") }
                 Button(action: onCheckForUpdates) {

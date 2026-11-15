@@ -1,3 +1,10 @@
+# NOVA Copilot for macOS Version 1.8.0 (2026-11-15)
+
+- Keeps the attached drawer tab above other app windows, including while the drawer is open.
+- Adds an explicit **Hide NOVA Drawer Handle** action. The tab stays hidden until you choose **Show NOVA Drawer Handle** or reopen NOVA from the menu bar.
+- Removes the redundant pin control now that the drawer remains available above other windows by default.
+- Bumps the Mac marketing version to 1.8.0 and build number to 40.
+
 # NOVA Copilot for macOS Version 1.7.9 (2026-11-15)
 
 - Adds a clearer cyan-blue tint and brighter grip marks to the frosted drawer handle.

@@ -282,8 +282,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private var edgeHandleScreen: NSScreen?
     private var drawerDragStartOrigin = NSPoint.zero
     private var drawerDragStartPointer = NSPoint.zero
+    private var isEdgeLauncherHidden = false
 
     private let edgeHandlePositionKey = "NOVAEdgeHandleVerticalPosition"
+    private let edgeHandleHiddenKey = "NOVAEdgeHandleHidden"
     private let drawerGripWidth: CGFloat = 28
     private let drawerWidth: CGFloat = 453
     private let drawerHeight: CGFloat = 690
@@ -299,11 +301,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         createApplicationMenu()
         createMenuBarItem()
         registerGlobalHotKey()
-
-        panelState.onPinChanged = { [weak self] pinned in
-            guard let self else { return }
-            self.panel.level = pinned || !self.edgeHandleViewState.isDrawerOpen ? .floating : .normal
-        }
+        isEdgeLauncherHidden = UserDefaults.standard.bool(forKey: edgeHandleHiddenKey)
 
         NotificationCenter.default.addObserver(
             self,
@@ -319,11 +317,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         )
 
         positionDrawer(on: primaryScreen() ?? screenUnderPointer(), open: false)
-        panel.orderFrontRegardless()
+        if !isEdgeLauncherHidden { panel.orderFrontRegardless() }
     }
 
     @objc private func restoreDrawer(_ notification: Notification?) {
-        guard !edgeHandleViewState.isDragging,
+        guard !isEdgeLauncherHidden,
+              !edgeHandleViewState.isDragging,
               let screen = screenContainingPanel() ?? primaryScreen() else { return }
         positionDrawer(on: screen, open: edgeHandleViewState.isDrawerOpen)
         panel.orderFrontRegardless()
@@ -338,16 +337,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        if !edgeHandleViewState.isDrawerOpen { setDrawerOpen(true, animated: true) }
+        showPanel()
         return true
     }
 
     func togglePanel() {
         guard !isPanelAnimating else { return }
+        if isEdgeLauncherHidden {
+            showPanel()
+            return
+        }
         setDrawerOpen(!edgeHandleViewState.isDrawerOpen, animated: true)
     }
 
     private func showPanel() {
+        setEdgeLauncherHidden(false)
         setDrawerOpen(true, animated: true)
     }
 
@@ -429,6 +433,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         )
         showLauncherItem.target = self
         windowMenu.addItem(showLauncherItem)
+        let hideLauncherItem = NSMenuItem(
+            title: "Hide NOVA Drawer Handle",
+            action: #selector(hideEdgeLauncherFromMenu),
+            keyEquivalent: ""
+        )
+        hideLauncherItem.target = self
+        windowMenu.addItem(hideLauncherItem)
 
         let windowMenuItem = NSMenuItem()
         windowMenuItem.submenu = windowMenu
@@ -441,10 +452,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
     @objc private func showEdgeLauncherFromMenu() {
         guard let screen = primaryScreen() ?? screenUnderPointer() else { return }
+        setEdgeLauncherHidden(false)
         edgeHandleViewState.isDrawerOpen = false
         panel.level = .floating
         positionDrawer(on: screen, open: false)
         panel.orderFrontRegardless()
+    }
+
+    @objc private func hideEdgeLauncherFromMenu() {
+        setEdgeLauncherHidden(true)
+        edgeHandleViewState.isDrawerOpen = false
+        panel.orderOut(nil)
+    }
+
+    private func setEdgeLauncherHidden(_ hidden: Bool) {
+        isEdgeLauncherHidden = hidden
+        UserDefaults.standard.set(hidden, forKey: edgeHandleHiddenKey)
     }
 
     @objc private func checkForUpdates() {
@@ -569,17 +592,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
     private func setDrawerOpen(_ open: Bool, animated: Bool) {
         guard !isPanelAnimating, let screen = screenContainingPanel() ?? screenUnderPointer() ?? primaryScreen() else { return }
+        setEdgeLauncherHidden(false)
         edgeHandleScreen = screen
         if open {
             edgeHandleViewState.isDrawerOpen = true
-            panel.level = panelState.isPinned ? .floating : .normal
+            panel.level = .floating
             NSApp.activate(ignoringOtherApps: true)
             panel.makeKeyAndOrderFront(nil)
         }
         let target = drawerOrigin(on: screen, open: open, y: panel.frame.origin.y)
         guard animated else {
             edgeHandleViewState.isDrawerOpen = open
-            panel.level = (panelState.isPinned || !open) ? .floating : .normal
+            panel.level = .floating
             panel.setFrameOrigin(target)
             panel.orderFrontRegardless()
             return
@@ -593,12 +617,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         } completionHandler: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.edgeHandleViewState.isDrawerOpen = open
-                self.panel.level = (self.panelState.isPinned || !open) ? .floating : .normal
-                self.panel.orderFrontRegardless()
-                if open {
-                    NSApp.activate(ignoringOtherApps: true)
-                    self.panel.makeKeyAndOrderFront(nil)
+                self.panel.level = .floating
+                if self.isEdgeLauncherHidden {
+                    self.edgeHandleViewState.isDrawerOpen = false
+                    self.panel.orderOut(nil)
+                } else {
+                    self.edgeHandleViewState.isDrawerOpen = open
+                    self.panel.orderFrontRegardless()
+                    if open {
+                        NSApp.activate(ignoringOtherApps: true)
+                        self.panel.makeKeyAndOrderFront(nil)
+                    }
                 }
                 self.isPanelAnimating = false
             }
@@ -651,13 +680,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         } completionHandler: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.edgeHandleViewState.isDrawerOpen = shouldOpen
-                self.panel.level = (self.panelState.isPinned || !shouldOpen) ? .floating : .normal
-                if shouldOpen {
-                    NSApp.activate(ignoringOtherApps: true)
-                    self.panel.makeKeyAndOrderFront(nil)
+                self.panel.level = .floating
+                if self.isEdgeLauncherHidden {
+                    self.edgeHandleViewState.isDrawerOpen = false
+                    self.panel.orderOut(nil)
+                } else {
+                    self.edgeHandleViewState.isDrawerOpen = shouldOpen
+                    self.panel.orderFrontRegardless()
+                    if shouldOpen {
+                        NSApp.activate(ignoringOtherApps: true)
+                        self.panel.makeKeyAndOrderFront(nil)
+                    }
                 }
-                self.panel.orderFrontRegardless()
                 self.isPanelAnimating = false
             }
         }
