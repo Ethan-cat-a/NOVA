@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.7.5 (2026-11-15)
+
+- Makes the edge launcher drag reliably by separating its tap action from the parent drag gesture.
+- Shows the assistant drawer following the pull, snaps it flush against the launcher after a short intentional swipe, and lets users pull right to tuck it away.
+- Bumps the Mac marketing version to 1.7.5 and build number to 35.
+
 # NOVA Copilot for macOS Version 1.7.4 (2026-11-15)
 
 - Keeps the draggable side launcher visible at the screen edge while the assistant panel is open or closed, reserving space so it does not cover the chat.

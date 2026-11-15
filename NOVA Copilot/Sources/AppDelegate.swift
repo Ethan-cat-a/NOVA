@@ -148,12 +148,10 @@ private struct EdgeHandleView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Button(action: onOpen) {
-                NovaAvatarView(size: 34, isActive: state.isHovered || state.isDragging || state.isPinnedOpen)
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open NOVA Copilot")
+            NovaAvatarView(size: 34, isActive: state.isHovered || state.isDragging || state.isPinnedOpen)
+                .contentShape(Circle())
+                .onTapGesture(perform: onOpen)
+                .accessibilityLabel("Open NOVA Copilot")
 
             Image(systemName: "chevron.left")
                 .font(.system(size: 9, weight: .bold))
@@ -236,7 +234,7 @@ private struct EdgeHandleView: View {
                 }
         )
         .animation(.spring(response: 0.32, dampingFraction: 0.84), value: state.isHovered || state.isPinnedOpen)
-        .help("Drag left from the edge to reveal NOVA; drag right to tuck it away")
+        .help("Pull left to reveal NOVA; pull right to tuck it away")
     }
 }
 
@@ -255,13 +253,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private var preferencesWindow: NSWindow?
     private let edgeHandleViewState = EdgeHandleViewState()
     private var edgeHandleScreen: NSScreen?
-    private var edgeHandleDragStartOrigin = NSPoint.zero
     private var edgeHandleDragStartY: CGFloat = 0
+    private var edgeHandleDragStartPanelOrigin = NSPoint.zero
+    private var edgeHandleDragStartedWithPanelOpen = false
     private var edgeHandleHoverExpansion: DispatchWorkItem?
 
     private let edgeHandlePositionKey = "NOVAEdgeHandleVerticalPosition"
     private let edgeHandleCollapsedPeek: CGFloat = 64
-    private let edgeHandlePanelGap: CGFloat = 12
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -310,6 +308,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     }
 
     @objc private func restoreEdgeHandle(_ notification: Notification?) {
+        guard !edgeHandleViewState.isDragging else { return }
         let screen = panel.isVisible
             ? (screenContainingPanel() ?? primaryScreen())
             : primaryScreen()
@@ -347,20 +346,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
             return
         }
 
-        let visibleFrame = screen.visibleFrame
-        let targetOrigin = panelTargetOrigin(on: screen)
-        let startOrigin = NSPoint(x: visibleFrame.maxX + 34, y: targetOrigin.y)
-        let overshootOrigin = NSPoint(x: targetOrigin.x - 10, y: targetOrigin.y)
-
+        edgeHandleScreen = screen
         edgeHandleViewState.isHovered = false
         edgeHandleViewState.isDragging = false
+        edgeHandleViewState.isPinnedOpen = false
+        showEdgeHandle(on: screen, animated: false)
+
+        let targetOrigin = panelTargetOrigin(on: screen)
+        let startOrigin = drawerClosedPanelOrigin(on: screen, handleY: edgeHandlePanel.frame.origin.y)
+        let overshootOrigin = NSPoint(x: targetOrigin.x - 10, y: targetOrigin.y)
+
         panel.alphaValue = 0
         panel.setFrameOrigin(startOrigin)
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
-        // Keep the edge tab available while the chat is open. The chat window
-        // reserves the launcher width so the two controls never cover each other.
+        // Keep the compact pull tab attached to the chat drawer's right edge.
         showEdgeHandle(on: screen, animated: false)
         isPanelAnimating = true
 
@@ -387,8 +388,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         isPanelAnimating = true
 
         let screen = screenContainingPanel() ?? screenUnderPointer()
-        let exitX = (screen?.visibleFrame.maxX ?? panel.frame.maxX) + 34
-        let exitOrigin = NSPoint(x: exitX, y: panel.frame.origin.y)
+        let exitOrigin = screen.map {
+            drawerClosedPanelOrigin(on: $0, handleY: edgeHandlePanel.frame.origin.y)
+        } ?? NSPoint(x: panel.frame.maxX + 34, y: panel.frame.origin.y)
 
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.28
@@ -400,6 +402,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
             self.panel.orderOut(nil)
             self.panel.alphaValue = 1
             self.isPanelAnimating = false
+            self.edgeHandleViewState.isPinnedOpen = UserDefaults.standard.bool(forKey: "NOVAEdgeHandlePinnedOpen")
             self.showEdgeHandle(on: screen, animated: true)
         })
     }
@@ -655,7 +658,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         edgeHandleHoverExpansion?.cancel()
         edgeHandleViewState.isHovered = false
         edgeHandleViewState.isDragging = false
-        let visibleWidth = edgeHandleViewState.isPinnedOpen ? edgeHandlePanel.frame.width : edgeHandleCollapsedPeek
+        let visibleWidth = panel.isVisible || edgeHandleViewState.isDragging
+            ? edgeHandleCollapsedPeek
+            : (edgeHandleViewState.isPinnedOpen ? edgeHandlePanel.frame.width : edgeHandleCollapsedPeek)
         let target = edgeHandleOrigin(on: screen, visibleWidth: visibleWidth)
         guard animated else {
             edgeHandlePanel.setFrameOrigin(target)
@@ -690,10 +695,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     }
 
     private func setEdgeHandleHovered(_ hovered: Bool) {
-        guard edgeHandlePanel.isVisible,
-              let screen = edgeHandleScreen ?? screenUnderPointer() else { return }
+        guard edgeHandlePanel.isVisible else { return }
         edgeHandleHoverExpansion?.cancel()
         guard !edgeHandleViewState.isDragging else { return }
+        guard !panel.isVisible else {
+            edgeHandleViewState.isHovered = false
+            return
+        }
 
         if !hovered {
             guard !edgeHandleViewState.isPinnedOpen else { return }
@@ -731,18 +739,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         guard let screen = edgeHandleScreen ?? screenUnderPointer() else { return }
         if began {
             edgeHandleHoverExpansion?.cancel()
-            edgeHandleDragStartOrigin = edgeHandlePanel.frame.origin
             edgeHandleDragStartY = edgeHandlePanel.frame.origin.y
+            edgeHandleDragStartedWithPanelOpen = panel.isVisible
+            edgeHandleViewState.isPinnedOpen = false
+            if edgeHandleDragStartedWithPanelOpen {
+                edgeHandleDragStartPanelOrigin = panel.frame.origin
+            } else {
+                edgeHandleDragStartPanelOrigin = drawerClosedPanelOrigin(
+                    on: screen,
+                    handleY: edgeHandleDragStartY
+                )
+                panel.alphaValue = 1
+                panel.setFrameOrigin(edgeHandleDragStartPanelOrigin)
+                NSApp.activate(ignoringOtherApps: true)
+                panel.makeKeyAndOrderFront(nil)
+                panel.orderFrontRegardless()
+                edgeHandlePanel.orderFrontRegardless()
+            }
         }
 
         let visibleFrame = screen.visibleFrame
-        let minimumY = visibleFrame.minY + 10
-        let maximumY = max(minimumY, visibleFrame.maxY - edgeHandlePanel.frame.height - 10)
-        let leftLimit = visibleFrame.maxX - edgeHandlePanel.frame.width
-        let rightLimit = visibleFrame.maxX - edgeHandleCollapsedPeek
-        let x = min(max(edgeHandleDragStartOrigin.x + translation.width, leftLimit), rightLimit)
-        let y = min(max(edgeHandleDragStartY - translation.height, minimumY), maximumY)
-        edgeHandlePanel.setFrameOrigin(NSPoint(x: x, y: y))
+        let closedX = visibleFrame.maxX - edgeHandleCollapsedPeek
+        let openX = closedX - panel.frame.width
+        let panelX = min(max(edgeHandleDragStartPanelOrigin.x + translation.width, openX), closedX)
+        let minimumPanelY = visibleFrame.minY + 12
+        let maximumPanelY = max(minimumPanelY, visibleFrame.maxY - panel.frame.height - 12)
+        let panelY = min(max(edgeHandleDragStartPanelOrigin.y - translation.height, minimumPanelY), maximumPanelY)
+        panel.setFrameOrigin(NSPoint(x: panelX, y: panelY))
+
+        let handleOffsetY = (panel.frame.height - edgeHandlePanel.frame.height) / 2
+        let minimumHandleY = visibleFrame.minY + 10
+        let maximumHandleY = max(minimumHandleY, visibleFrame.maxY - edgeHandlePanel.frame.height - 10)
+        let handleY = min(max(panelY + handleOffsetY, minimumHandleY), maximumHandleY)
+        edgeHandlePanel.setFrameOrigin(NSPoint(x: closedX, y: handleY))
+        edgeHandlePanel.orderFrontRegardless()
     }
 
     private func finishEdgeHandleDrag(translation: CGSize) {
@@ -755,24 +785,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         let position = range > 0 ? (edgeHandlePanel.frame.origin.y - minimumY) / range : 0.5
         UserDefaults.standard.set(Double(position), forKey: edgeHandlePositionKey)
 
-        let travel = edgeHandlePanel.frame.width - edgeHandleCollapsedPeek
-        let revealDistance = visibleFrame.maxX - edgeHandlePanel.frame.origin.x - edgeHandleCollapsedPeek
-        let revealThreshold = max(18, travel * 0.22)
-        let wasDraggedHorizontally = abs(translation.width) > 24
-        let shouldStayOpen = wasDraggedHorizontally
-            ? revealDistance >= revealThreshold
-            : edgeHandleViewState.isPinnedOpen || edgeHandleViewState.isHovered
-        edgeHandleViewState.isPinnedOpen = shouldStayOpen
-        UserDefaults.standard.set(shouldStayOpen, forKey: "NOVAEdgeHandlePinnedOpen")
-
-        let targetX = shouldStayOpen
-            ? visibleFrame.maxX - edgeHandlePanel.frame.width
-            : visibleFrame.maxX - edgeHandleCollapsedPeek
-        let y = min(max(edgeHandlePanel.frame.origin.y, minimumY), maximumY)
+        // A short, intentional pull should open or tuck the drawer. The panel
+        // follows the pointer during the drag, then settles flush against the
+        // launcher instead of requiring a near full-width swipe.
+        let threshold = max(48, min(72, panel.frame.width * 0.16))
+        let shouldStayOpen = edgeHandleDragStartedWithPanelOpen
+            ? translation.width < threshold
+            : translation.width <= -threshold
+        let targetOrigin = shouldStayOpen
+            ? panelTargetOrigin(on: screen)
+            : drawerClosedPanelOrigin(on: screen, handleY: edgeHandlePanel.frame.origin.y)
+        isPanelAnimating = true
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.22
+            context.duration = shouldStayOpen ? 0.24 : 0.2
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.24, 1.0)
-            edgeHandlePanel.animator().setFrameOrigin(NSPoint(x: targetX, y: y))
+            panel.animator().setFrameOrigin(targetOrigin)
+            edgeHandlePanel.animator().setFrameOrigin(NSPoint(
+                x: visibleFrame.maxX - edgeHandleCollapsedPeek,
+                y: edgeHandlePanel.frame.origin.y
+            ))
+        } completionHandler: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if shouldStayOpen {
+                    NSApp.activate(ignoringOtherApps: true)
+                    self.panel.makeKeyAndOrderFront(nil)
+                    self.panel.orderFrontRegardless()
+                    self.edgeHandleViewState.isPinnedOpen = false
+                } else {
+                    self.panel.orderOut(nil)
+                    self.panel.alphaValue = 1
+                    self.edgeHandleViewState.isPinnedOpen = UserDefaults.standard.bool(forKey: "NOVAEdgeHandlePinnedOpen")
+                    self.showEdgeHandle(on: self.edgeHandleScreen, animated: true)
+                }
+                self.edgeHandleDragStartedWithPanelOpen = false
+                self.isPanelAnimating = false
+            }
         }
     }
 
@@ -826,12 +874,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private func panelTargetOrigin(on screen: NSScreen) -> NSPoint {
         let visible = screen.visibleFrame
         let frame = panel.frame
-        let launcherWidth = edgeHandlePanel?.frame.width ?? 184
-        let reservedWidth = launcherWidth + edgeHandlePanelGap
-        let x = max(visible.minX + 12, visible.maxX - frame.width - reservedWidth)
-        let topAlignedY = visible.maxY - frame.height - 12
-        let y = max(visible.minY + 12, topAlignedY)
+        let x = visible.maxX - edgeHandleCollapsedPeek - frame.width
+        let handleY = edgeHandleOrigin(on: screen, visibleWidth: edgeHandleCollapsedPeek).y
+        let centeredY = handleY + (edgeHandlePanel?.frame.height ?? 64) / 2 - frame.height / 2
+        let minimumY = visible.minY + 12
+        let maximumY = max(minimumY, visible.maxY - frame.height - 12)
+        let y = min(max(centeredY, minimumY), maximumY)
         return NSPoint(x: x, y: y)
+    }
+
+    private func drawerClosedPanelOrigin(on screen: NSScreen, handleY: CGFloat) -> NSPoint {
+        let visible = screen.visibleFrame
+        let minimumY = visible.minY + 12
+        let maximumY = max(minimumY, visible.maxY - panel.frame.height - 12)
+        let centeredY = handleY + edgeHandlePanel.frame.height / 2 - panel.frame.height / 2
+        let y = min(max(centeredY, minimumY), maximumY)
+        return NSPoint(x: visible.maxX - edgeHandleCollapsedPeek, y: y)
     }
 
     private func primaryScreen() -> NSScreen? {
