@@ -143,34 +143,48 @@ private struct DrawerGripView: View {
             Capsule()
                 .fill(.ultraThinMaterial)
                 .overlay(Capsule().fill(Color.black.opacity(0.14)))
+                .overlay(Capsule().fill(LinearGradient(
+                    colors: [Color.cyan.opacity(0.2), Color.blue.opacity(0.18), Color.purple.opacity(0.13)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )))
                 .overlay(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.42))
-                        .frame(width: 1, height: 22)
+                        .fill(LinearGradient(
+                            colors: [Color.cyan, Color.blue.opacity(0.85)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ))
+                        .frame(width: 1.8, height: 30)
                 }
-                .overlay(Capsule().stroke(Color.white.opacity(0.28), lineWidth: 0.8))
+                .overlay(Capsule().stroke(LinearGradient(
+                    colors: [Color.cyan.opacity(0.72), Color.blue.opacity(0.48), Color.white.opacity(0.34)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ), lineWidth: 0.9))
                 .shadow(color: Color.black.opacity(0.14), radius: 5, x: -2, y: 0)
                 .frame(width: 20, height: 92)
 
             VStack(spacing: 10) {
                 Image(systemName: state.isDrawerOpen ? "chevron.right" : "chevron.left")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.76))
+                    .foregroundStyle(Color.cyan.opacity(0.96))
+                    .shadow(color: Color.blue.opacity(0.5), radius: 3)
                     .accessibilityHidden(true)
 
                 VStack(spacing: 3) {
                     ForEach(0..<3) { _ in
                         Capsule()
-                            .fill(Color.white.opacity(0.66))
-                            .frame(width: 7, height: 1.5)
+                            .fill(Color.cyan.opacity(0.92))
+                            .frame(width: 8, height: 1.7)
                     }
                 }
                 .accessibilityHidden(true)
 
                 Circle()
-                    .fill(Color.cyan.opacity(0.78))
-                    .frame(width: 3, height: 3)
-                    .shadow(color: Color.cyan.opacity(0.7), radius: 3)
+                    .fill(Color.cyan)
+                    .frame(width: 3.5, height: 3.5)
+                    .shadow(color: Color.cyan.opacity(0.82), radius: 3)
             }
             .frame(width: 20, height: 92)
         }
@@ -195,6 +209,29 @@ private struct DrawerGripView: View {
     }
 }
 
+private struct DrawerSurfaceShape: Shape {
+    var radius: CGFloat = 18
+
+    func path(in rect: CGRect) -> Path {
+        let radius = min(radius, min(rect.width, rect.height) / 2)
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - radius, y: rect.minY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY + radius),
+            control: CGPoint(x: rect.maxX, y: rect.minY)
+        )
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - radius))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - radius, y: rect.maxY),
+            control: CGPoint(x: rect.maxX, y: rect.maxY)
+        )
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
 private struct DrawerPanelContent: View {
     @ObservedObject var state: EdgeHandleViewState
     let assistant: AssistantView
@@ -210,11 +247,14 @@ private struct DrawerPanelContent: View {
                 onDragChanged: onDragChanged,
                 onDragEnded: onDragEnded
             )
-        .frame(width: 28, height: 108, alignment: .trailing)
+                .frame(width: 28, height: 108, alignment: .trailing)
 
             Group {
                 if state.isDrawerOpen {
                     assistant
+                        .clipShape(DrawerSurfaceShape())
+                        .overlay(DrawerSurfaceShape().stroke(Color.white.opacity(0.42), lineWidth: 1))
+                        .shadow(color: Color.black.opacity(0.14), radius: 12, x: -5, y: 0)
                 } else {
                     Color.clear
                 }
@@ -638,7 +678,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]

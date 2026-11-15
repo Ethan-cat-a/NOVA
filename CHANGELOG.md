@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.7.9 (2026-11-15)
+
+- Adds a clearer cyan-blue tint and brighter grip marks to the frosted drawer handle.
+- Softens the assistant panel's outer corners with a continuous macOS-style edge, subtle outline and shadow while keeping the handle attached.
+- Bumps the Mac marketing version to 1.7.9 and build number to 39.
+
 # NOVA Copilot for macOS Version 1.7.8 (2026-11-15)
 
 - Replaces the wide avatar grip with a slim, translucent macOS-style pull tab; keeps a small direction arrow and simple grip marks.
