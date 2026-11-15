@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.7.6 (2026-11-15)
+
+- Attaches the edge grip to the open assistant drawer so it moves with the panel.
+- Lets users push the connected grip right to slide the drawer back in; restores the grab tab at the screen edge when tucked away.
+- Bumps the Mac marketing version to 1.7.6 and build number to 36.
+
 # NOVA Copilot for macOS Version 1.7.5 (2026-11-15)
 
 - Makes the edge launcher drag reliably by separating its tap action from the parent drag gesture.
