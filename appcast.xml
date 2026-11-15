@@ -8,14 +8,24 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <language>en</language>
     <item>
       <title>Version 1.8.0</title>
-      <pubDate>Sun, 15 Nov 2026 06:19:32 GMT</pubDate>
+      <pubDate>Sun, 15 Nov 2026 06:35:34 GMT</pubDate>
       <sparkle:version>40</sparkle:version>
       <sparkle:shortVersionString>1.8.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <sparkle:fullReleaseNotesLink>https://github.com/Ethan-cat-a/NOVA/blob/main/NOVA%20Copilot/RELEASE_NOTES_v1.8.0.md</sparkle:fullReleaseNotesLink>
+      <description sparkle:descriptionFormat="plain-text"><![CDATA[
+This update keeps NOVA’s drawer tab available while you work in other apps and gives you a deliberate way to hide it.
+
+• Keeps the drawer above other application windows, whether open or tucked to the screen edge.
+• Adds Hide NOVA Drawer Handle to the Window menu. The menu bar item brings NOVA back when you want it.
+• Removes the pin control because the drawer now stays in front by default.
+
+The universal macOS build supports Apple silicon and Intel Macs running macOS 13 or later.
+      ]]></description>
       <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.8.0/NOVA-Copilot-1.8.0.zip" length="5416050" type="application/octet-stream" sparkle:edSignature="/fVsTiSBNpmjjw9Tm6smeXc+YiGuyYgkTUMUZFZb7VoP323wsrejPGyow0udQvtlEzf9ppxHytqZD4EqXE8rDg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: oFT8a6HLRpvILBJ+uDsXdOBlSvyt1BgeiGeCxXgurtt1NS/6bg4hI9PjnTO506btlnPF4c/AF1VqrC/YakzVCw==
-length: 1162
+edSignature: d5V3J8pumOhp0gCSVcDMhab9o/lS63wbUW+RB4d5oRoRDLDQDoFpDVEVasceRlqQvUGf5iGDDYVC01+9Q1mvCw==
+length: 1900
 -->
