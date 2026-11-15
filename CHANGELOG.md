@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.7.7 (2026-11-15)
+
+- Replaces the separate edge launcher and chat windows with one drawer window and an attached grip.
+- Keeps the grip visible while tucked away; dragging left reveals the panel and dragging right tucks it back. Clicking the grip also toggles the drawer.
+- Bumps the Mac marketing version to 1.7.7 and build number to 37.
+
 # NOVA Copilot for macOS Version 1.7.6 (2026-11-15)
 
 - Attaches the edge grip to the open assistant drawer so it moves with the panel.
