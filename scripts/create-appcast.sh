@@ -43,10 +43,31 @@ fi
 short_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
 build_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")"
 minimum_system_version="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$plist")"
+release_notes_file="$repo_root/NOVA Copilot/RELEASE_NOTES_v${short_version}.md"
+if [[ ! -f "$release_notes_file" ]]; then
+  echo "Release notes for ${short_version} not found: $release_notes_file" >&2
+  exit 66
+fi
+if grep -Fq ']]>' "$release_notes_file"; then
+  echo "Release notes contain a CDATA terminator that cannot be embedded safely: $release_notes_file" >&2
+  exit 65
+fi
+release_notes="$(sed -E \
+  -e '/^[[:space:]]*#{1,6}[[:space:]]/d' \
+  -e 's/^[[:space:]]*[-*][[:space:]]+/• /' \
+  -e 's/\*\*([^*]+)\*\*/\1/g' \
+  -e 's/\*([^*]+)\*/\1/g' \
+  -e 's/\[([^]]+)\]\([^)]+\)/\1/g' \
+  "$release_notes_file" | awk 'NF { if (pending_blank && printed) print ""; print; pending_blank = 0; printed = 1; next } printed { pending_blank = 1 }')"
+if [[ -z "$release_notes" ]]; then
+  echo "Release notes for ${short_version} are empty: $release_notes_file" >&2
+  exit 65
+fi
 archive_length="$(stat -f '%z' "$archive")"
 published_at="$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S GMT')"
 archive_signature="$("$sign_update" -p "$archive")"
 download_url="${download_prefix}${archive_name}"
+release_notes_url="https://github.com/Ethan-cat-a/NOVA/blob/main/NOVA%20Copilot/RELEASE_NOTES_v${short_version}.md"
 output_dir="$(dirname "$output")"
 mkdir -p "$output_dir"
 temporary_feed="$(mktemp "$output_dir/.appcast.XXXXXX.xml")"
@@ -66,6 +87,10 @@ cat > "$temporary_feed" <<EOF
       <sparkle:version>${build_version}</sparkle:version>
       <sparkle:shortVersionString>${short_version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>${minimum_system_version}</sparkle:minimumSystemVersion>
+      <sparkle:fullReleaseNotesLink>${release_notes_url}</sparkle:fullReleaseNotesLink>
+      <description sparkle:descriptionFormat="plain-text"><![CDATA[
+${release_notes}
+      ]]></description>
       <enclosure url="${download_url}" length="${archive_length}" type="application/octet-stream" sparkle:edSignature="${archive_signature}" />
     </item>
   </channel>
