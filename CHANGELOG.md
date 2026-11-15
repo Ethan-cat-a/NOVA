@@ -1,3 +1,10 @@
+# NOVA Copilot for macOS Version 1.7.8 (2026-11-15)
+
+- Replaces the wide avatar grip with a slim, translucent macOS-style pull tab; keeps a small direction arrow and simple grip marks.
+- Anchors dragging to the screen pointer to stop the panel from shaking while it follows the pull.
+- Snaps to the nearest open or tucked position on release, with the halfway point favoring open so the panel remains visible.
+- Bumps the Mac marketing version to 1.7.8 and build number to 38.
+
 # NOVA Copilot for macOS Version 1.7.7 (2026-11-15)
 
 - Replaces the separate edge launcher and chat windows with one drawer window and an attached grip.

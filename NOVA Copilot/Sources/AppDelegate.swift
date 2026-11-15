@@ -128,7 +128,6 @@ struct NovaAvatarView: View {
 
 @MainActor
 private final class EdgeHandleViewState: ObservableObject {
-    @Published var isHovered = false
     @Published var isDragging = false
     @Published var isDrawerOpen = false
 }
@@ -136,76 +135,62 @@ private final class EdgeHandleViewState: ObservableObject {
 private struct DrawerGripView: View {
     @ObservedObject var state: EdgeHandleViewState
     let onToggle: () -> Void
-    let onDragChanged: (CGSize, Bool) -> Void
-    let onDragEnded: (CGSize) -> Void
+    let onDragChanged: (Bool) -> Void
+    let onDragEnded: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            NovaAvatarView(size: 26, isActive: state.isHovered || state.isDragging || state.isDrawerOpen)
-                .contentShape(Circle())
-                .accessibilityLabel("NOVA Copilot drawer grip")
-
-            Image(systemName: state.isDrawerOpen ? "chevron.right" : "chevron.left")
-                .font(.system(size: 8, weight: .heavy))
-                .foregroundStyle(Color.white.opacity(0.66))
-                .accessibilityHidden(true)
-
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(Color.white.opacity(0.58))
-                .contentShape(Rectangle())
-                .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 5)
-        .frame(width: 64, height: 56)
-        .background(
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.035, green: 0.09, blue: 0.22).opacity(0.98),
-                            Color(red: 0.025, green: 0.045, blue: 0.13).opacity(0.98)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(alignment: .leading) {
+        ZStack(alignment: .trailing) {
             Capsule()
-                .fill(Color.cyan.opacity(state.isHovered ? 0.92 : 0.62))
-                .frame(width: 2, height: state.isHovered ? 32 : 24)
-                .padding(.leading, 2)
+                .fill(.ultraThinMaterial)
+                .overlay(Capsule().fill(Color.black.opacity(0.14)))
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.42))
+                        .frame(width: 1, height: 22)
+                }
+                .overlay(Capsule().stroke(Color.white.opacity(0.28), lineWidth: 0.8))
+                .shadow(color: Color.black.opacity(0.14), radius: 5, x: -2, y: 0)
+                .frame(width: 20, height: 92)
+
+            VStack(spacing: 10) {
+                Image(systemName: state.isDrawerOpen ? "chevron.right" : "chevron.left")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.76))
+                    .accessibilityHidden(true)
+
+                VStack(spacing: 3) {
+                    ForEach(0..<3) { _ in
+                        Capsule()
+                            .fill(Color.white.opacity(0.66))
+                            .frame(width: 7, height: 1.5)
+                    }
+                }
+                .accessibilityHidden(true)
+
+                Circle()
+                    .fill(Color.cyan.opacity(0.78))
+                    .frame(width: 3, height: 3)
+                    .shadow(color: Color.cyan.opacity(0.7), radius: 3)
+            }
+            .frame(width: 20, height: 92)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .stroke(Color.white.opacity(state.isHovered ? 0.3 : 0.18), lineWidth: 1)
-        )
-        .shadow(
-            color: Color.cyan.opacity(state.isHovered ? 0.4 : 0.18),
-            radius: state.isHovered ? 14 : 8,
-            x: -3,
-            y: 0
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
-        .onHover { isHovered in
-            state.isHovered = isHovered
-        }
+        .frame(width: 28, height: 108, alignment: .trailing)
+        .contentShape(Rectangle())
         .onTapGesture(perform: onToggle)
         .simultaneousGesture(
             DragGesture(minimumDistance: 5)
-                .onChanged { value in
+                .onChanged { _ in
                     let began = !state.isDragging
                     state.isDragging = true
-                    onDragChanged(value.translation, began)
+                    onDragChanged(began)
                 }
-                .onEnded { value in
-                    onDragEnded(value.translation)
+                .onEnded { _ in
+                    onDragEnded()
                     state.isDragging = false
                 }
         )
-        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: state.isHovered || state.isDrawerOpen)
         .help(state.isDrawerOpen ? "Push right to tuck NOVA away" : "Pull left to open NOVA")
+        .accessibilityLabel(state.isDrawerOpen ? "Close NOVA Copilot drawer" : "Open NOVA Copilot drawer")
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -214,8 +199,8 @@ private struct DrawerPanelContent: View {
     @ObservedObject var state: EdgeHandleViewState
     let assistant: AssistantView
     let onToggle: () -> Void
-    let onDragChanged: (CGSize, Bool) -> Void
-    let onDragEnded: (CGSize) -> Void
+    let onDragChanged: (Bool) -> Void
+    let onDragEnded: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
@@ -225,7 +210,7 @@ private struct DrawerPanelContent: View {
                 onDragChanged: onDragChanged,
                 onDragEnded: onDragEnded
             )
-            .frame(width: 64, height: 56)
+        .frame(width: 28, height: 108, alignment: .trailing)
 
             Group {
                 if state.isDrawerOpen {
@@ -236,7 +221,7 @@ private struct DrawerPanelContent: View {
             }
             .frame(width: 425, height: 690)
         }
-        .frame(width: 489, height: 690, alignment: .leading)
+        .frame(width: 453, height: 690, alignment: .leading)
         .background(Color.clear)
     }
 }
@@ -256,11 +241,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private let edgeHandleViewState = EdgeHandleViewState()
     private var edgeHandleScreen: NSScreen?
     private var drawerDragStartOrigin = NSPoint.zero
-    private var drawerDragStartedOpen = false
+    private var drawerDragStartPointer = NSPoint.zero
 
     private let edgeHandlePositionKey = "NOVAEdgeHandleVerticalPosition"
-    private let drawerGripWidth: CGFloat = 64
-    private let drawerWidth: CGFloat = 489
+    private let drawerGripWidth: CGFloat = 28
+    private let drawerWidth: CGFloat = 453
     private let drawerHeight: CGFloat = 690
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -545,7 +530,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private func setDrawerOpen(_ open: Bool, animated: Bool) {
         guard !isPanelAnimating, let screen = screenContainingPanel() ?? screenUnderPointer() ?? primaryScreen() else { return }
         edgeHandleScreen = screen
-        edgeHandleViewState.isHovered = false
         if open {
             edgeHandleViewState.isDrawerOpen = true
             panel.level = panelState.isPinned ? .floating : .normal
@@ -581,33 +565,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         }
     }
 
-    private func updateDrawerDrag(translation: CGSize, began: Bool) {
+    private func updateDrawerDrag(began: Bool) {
         guard let screen = screenContainingPanel() ?? edgeHandleScreen ?? screenUnderPointer() else { return }
         if began {
-            drawerDragStartedOpen = edgeHandleViewState.isDrawerOpen
             drawerDragStartOrigin = panel.frame.origin
-            if !drawerDragStartedOpen {
+            drawerDragStartPointer = NSEvent.mouseLocation
+            if !edgeHandleViewState.isDrawerOpen {
                 edgeHandleViewState.isDrawerOpen = true
                 panel.level = .floating
-                NSApp.activate(ignoringOtherApps: true)
-                panel.makeKeyAndOrderFront(nil)
             }
         }
         let visible = screen.visibleFrame
         let closedX = visible.maxX - drawerGripWidth
         let openX = visible.maxX - drawerWidth
-        let x = min(max(drawerDragStartOrigin.x + translation.width, openX), closedX)
+        let pointer = NSEvent.mouseLocation
+        let deltaX = pointer.x - drawerDragStartPointer.x
+        let deltaY = pointer.y - drawerDragStartPointer.y
+        let x = min(max(drawerDragStartOrigin.x + deltaX, openX), closedX)
         let minimumY = visible.minY + 12
         let maximumY = max(minimumY, visible.maxY - drawerHeight - 12)
-        let y = min(max(drawerDragStartOrigin.y - translation.height, minimumY), maximumY)
+        let y = min(max(drawerDragStartOrigin.y + deltaY, minimumY), maximumY)
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.orderFrontRegardless()
     }
 
-    private func finishDrawerDrag(translation: CGSize) {
+    private func finishDrawerDrag() {
         guard let screen = screenContainingPanel() ?? edgeHandleScreen ?? screenUnderPointer() else { return }
-        let shouldOpen = drawerDragStartedOpen ? translation.width < 55 : translation.width < -60
         let visible = screen.visibleFrame
+        let openX = visible.maxX - drawerWidth
+        let closedX = visible.maxX - drawerGripWidth
+        let midpointX = openX + (closedX - openX) / 2
+        // At halfway, choose open so a partial pull does not make the drawer disappear.
+        let shouldOpen = panel.frame.origin.x <= midpointX
         let minimumY = visible.minY + 12
         let maximumY = max(minimumY, visible.maxY - drawerHeight - 12)
         let y = min(max(panel.frame.origin.y, minimumY), maximumY)
@@ -672,8 +661,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
             state: edgeHandleViewState,
             assistant: assistant,
             onToggle: { [weak self] in self?.togglePanel() },
-            onDragChanged: { [weak self] translation, began in self?.updateDrawerDrag(translation: translation, began: began) },
-            onDragEnded: { [weak self] translation in self?.finishDrawerDrag(translation: translation) }
+            onDragChanged: { [weak self] began in self?.updateDrawerDrag(began: began) },
+            onDragEnded: { [weak self] in self?.finishDrawerDrag() }
         ))
         panel.setFrameOrigin(NSPoint(x: 0, y: 0))
     }
