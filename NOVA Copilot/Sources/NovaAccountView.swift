@@ -18,7 +18,7 @@ struct NovaAccountView: View {
     @ObservedObject var store: NovaAccountStore
     @Environment(\.dismiss) private var dismiss
     @StateObject private var form: NovaAccountForm
-    @State private var showsExistingAccountOptions = false
+    @State private var showsExistingAccountOptions = true
 
     init(store: NovaAccountStore) {
         self.store = store
@@ -61,7 +61,7 @@ struct NovaAccountView: View {
                 if !store.isOwner {
                     ownerCodeSection
                     if store.isGuest {
-                        DisclosureGroup("Sign in to an existing account", isExpanded: $showsExistingAccountOptions) {
+                        DisclosureGroup("Restore owner access across devices", isExpanded: $showsExistingAccountOptions) {
                             existingAccountSection
                                 .padding(.top, 8)
                         }
@@ -137,8 +137,9 @@ struct NovaAccountView: View {
             .buttonStyle(.bordered)
             .disabled(store.isWorking || store.isGoogleSignInInProgress)
 
-            Text("Sign in with Google or your existing email and password.")
+            Text("If your one-time owner code was used on another device, sign in with the Google account registered as the NOVA owner. Owner access follows that account across Macs and app updates.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             TextField("Email address", text: $form.email)
                 .textFieldStyle(.roundedBorder)
                 .autocorrectionDisabled()

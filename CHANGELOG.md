@@ -1,3 +1,10 @@
+# NOVA Copilot for macOS Version 1.7.4 (2026-11-15)
+
+- Keeps the draggable side launcher visible at the screen edge while the assistant panel is open or closed, reserving space so it does not cover the chat.
+- Reasserts the launcher after startup, app activation and display changes; keeps a visible recovery command in the Window menu.
+- Lets the edge avatar toggle the assistant panel, and retains the 1.7.3 launcher drag and owner-access recovery improvements.
+- Bumps the Mac marketing version to 1.7.4 and build number to 34.
+
 # NOVA Copilot for macOS Version 1.6.8 (2026-11-14)
 
 - Adds read-only GitHub access for searching public repositories and reading public files, issues and pull requests; private repositories and write operations are not supported.

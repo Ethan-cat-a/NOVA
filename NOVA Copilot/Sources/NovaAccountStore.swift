@@ -48,7 +48,9 @@ final class NovaAccountStore: ObservableObject {
               tokenResponse.user?.emailConfirmedAt != nil else {
             throw NovaAccountError.message("Sign-in did not return a session. Verify your email and try again.")
         }
+        isOwner = false
         accept(tokenResponse, accessToken: accessToken, refreshToken: refreshToken, fallbackEmail: normalizedEmail)
+        await refreshOwnerStatus()
         statusMessage = nil
     }
 
@@ -76,7 +78,7 @@ final class NovaAccountStore: ObservableObject {
         )
         let result = try JSONDecoder().decode(OwnerCodeResponse.self, from: data)
         guard result.isOwner == true else {
-            throw NovaAccountError.message("That owner code is invalid or has already been claimed.")
+            throw NovaAccountError.message("That one-time code is invalid or was claimed on another device. Sign in with your owner Google account below to restore owner access here; it persists across Macs and app updates.")
         }
         isOwner = true
         statusMessage = "Owner profile activated. Your messages are unlimited."
@@ -156,7 +158,9 @@ final class NovaAccountStore: ObservableObject {
                   tokenResponse.user?.emailConfirmedAt != nil else {
                 throw NovaAccountError.message("Google didn’t return a verified email address. Try another Google account.")
             }
+            isOwner = false
             accept(tokenResponse, accessToken: accessToken, refreshToken: refreshToken, fallbackEmail: email)
+            await refreshOwnerStatus()
             statusMessage = nil
         } catch {
             statusMessage = error.localizedDescription
