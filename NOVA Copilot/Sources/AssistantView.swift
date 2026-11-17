@@ -2,6 +2,31 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
+private final class StreamingAutoScrollScheduler: ObservableObject {
+    private let minimumInterval: TimeInterval = 1.0 / 30.0
+    private var lastScrollUptime: TimeInterval = 0
+    private var pendingScroll: DispatchWorkItem?
+
+    func schedule(_ action: @escaping () -> Void) {
+        guard pendingScroll == nil else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        let delay = max(0, minimumInterval - (now - lastScrollUptime))
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingScroll = nil
+            self.lastScrollUptime = ProcessInfo.processInfo.systemUptime
+            action()
+        }
+        pendingScroll = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    func cancel() {
+        pendingScroll?.cancel()
+        pendingScroll = nil
+    }
+}
+
 struct AssistantView: View {
     @ObservedObject var model: NovaChatModel
     @ObservedObject var panelState: PanelState
@@ -16,6 +41,7 @@ struct AssistantView: View {
     @State private var isUserScrollingConversation = false
     @State private var conversationViewportBottomY: CGFloat = .infinity
     @State private var conversationContentBottomY: CGFloat = .infinity
+    @StateObject private var streamingAutoScroll = StreamingAutoScrollScheduler()
     @State private var showsUpdateNotes = false
     @State private var showsChatHistory = false
     @State private var showsDocumentLibrary = false
@@ -80,6 +106,7 @@ struct AssistantView: View {
         .frame(minWidth: 370, minHeight: 500)
         .background(Color(nsColor: .windowBackgroundColor))
         .onExitCommand(perform: onHide)
+        .onDisappear { streamingAutoScroll.cancel() }
         .fileImporter(
             isPresented: $viewState.showsContextImporter,
             allowedContentTypes: [.image, .pdf, .plainText, .rtf, UTType(filenameExtension: "md") ?? .plainText] + WordDocument.importTypes + ContextTextExtractor.sourceCodeTypes,
@@ -104,6 +131,7 @@ struct AssistantView: View {
             if count > 0 { viewState.dismissFirstRunTip() }
         }
         .onChange(of: model.activeThreadID) { _ in
+            streamingAutoScroll.cancel()
             viewState.useDocumentLibrary = false
             viewState.useGitContext = false
             viewState.makeWordDocument = false
@@ -399,8 +427,14 @@ struct AssistantView: View {
                                     onRetry: { model.retryResponse(message.id) },
                                     onSaveWord: { viewState.wordDraftReview = WordDraftReview(text: message.content) },
                                     onStreamTextUpdate: {
-                                        guard isConversationAtBottom else { return }
-                                        proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                                        guard isConversationAtBottom else {
+                                            streamingAutoScroll.cancel()
+                                            return
+                                        }
+                                        streamingAutoScroll.schedule {
+                                            guard isConversationAtBottom else { return }
+                                            proxy.scrollTo("conversation-bottom", anchor: .bottom)
+                                        }
                                     }
                                 )
                                     .id(message.id)

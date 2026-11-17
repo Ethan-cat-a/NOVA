@@ -3,16 +3,16 @@
   <h1>NOVA COPILOT</h1>
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
-  <p><strong>macOS 1.8.0 keeps NOVA’s drawer tab above your other apps and lets you hide it only when you choose.</strong></p>
+  <p><strong>macOS 1.9.0 remembers drawer placement per display and smooths scrolling during streamed replies.</strong></p>
   <p>
-    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.8.0/NOVA-Copilot-1.8.0.dmg"><strong>Download latest macOS app · 1.8.0 DMG</strong></a>
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg"><strong>Download latest macOS app · 1.9.0 DMG</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.3/NOVA-Copilot-Windows-1.5.3.exe"><strong>Download Windows app · 1.5.3</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS source" src="https://img.shields.io/badge/source-1.8.0-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="macOS source" src="https://img.shields.io/badge/source-1.9.0-263C63?style=flat-square&logo=apple&logoColor=white" />
     <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.3-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
@@ -26,7 +26,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Release version 1.8.0 · Native Swift / AppKit</strong></p>
+      <p><strong>Release version 1.9.0 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with an avatar-eyed menu-bar control, floating assistant panel and persistent draggable edge launcher.</p>
       <ul>
         <li>Chat as a guest with optional Google or email/password sign-in</li>
@@ -46,13 +46,15 @@
         <li>CS Agent combines coding help, Word drafts and the existing allowlisted Agent plugins</li>
         <li>Read-only public GitHub repository, file, issue and pull request lookups; no private-repository or write access</li>
         <li>CS Agent replies stream as they arrive with batched rendering and periodic chat-history saves</li>
+        <li>Streaming auto-scroll is coalesced to keep long replies smoother while the text continues to appear promptly</li>
+        <li>The drawer handle remembers its vertical position independently on each display</li>
         <li>Include read-only Git status for a selected repository on a single request</li>
         <li>Open a Google Search in Chrome or share the current page after reviewing its extracted text; open projects in Xcode or Microsoft Word</li>
         <li>Local tools cannot modify project files, run arbitrary commands, commit or push changes, or install third-party plugins</li>
         <li>Answer actions appear on hover, with Copy, Try again and Word export</li>
         <li>Matches the Mac’s light or dark appearance</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.8.0/NOVA-Copilot-1.8.0.dmg"><strong>↓ Latest published Mac release · 1.8.0 DMG</strong></a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg"><strong>↓ Latest published Mac release · 1.9.0 DMG</strong></a></p>
       <p><sub>Users on 1.2.0, 1.3.0, or 1.3.1 must install 1.3.2 manually once; users on 1.3.2 can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
@@ -75,7 +77,7 @@
   </tr>
 </table>
 
-> Version 1.8.0 is the current published macOS release and download. Version 1.5.3 is the latest Windows release.
+> Version 1.9.0 is the current published macOS release and download. Version 1.5.3 is the latest Windows release.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
@@ -154,6 +156,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for macOS — 1.9.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.9.0)
 - [NOVA Copilot for macOS — 1.8.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.8.0)
 - [NOVA Copilot for macOS — 1.7.2](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.7.2)
 - [NOVA Copilot for macOS — 1.7.1](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.7.1)

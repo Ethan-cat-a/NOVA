@@ -285,6 +285,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     private var isEdgeLauncherHidden = false
 
     private let edgeHandlePositionKey = "NOVAEdgeHandleVerticalPosition"
+    private let edgeHandlePositionMigrationKey = "NOVAEdgeHandleVerticalPositionMigratedToDisplays"
     private let edgeHandleHiddenKey = "NOVAEdgeHandleHidden"
     private let drawerGripWidth: CGFloat = 28
     private let drawerWidth: CGFloat = 453
@@ -670,7 +671,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         let maximumY = max(minimumY, visible.maxY - drawerHeight - 12)
         let y = min(max(panel.frame.origin.y, minimumY), maximumY)
         let range = max(1, maximumY - minimumY)
-        UserDefaults.standard.set(Double((y - minimumY) / range), forKey: edgeHandlePositionKey)
+        saveVerticalPosition(y, for: screen, visibleFrame: visible)
         let target = drawerOrigin(on: screen, open: shouldOpen, y: y)
         isPanelAnimating = true
         NSAnimationContext.runAnimationGroup { context in
@@ -751,10 +752,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         let visible = screen.visibleFrame
         let minimumY = visible.minY + 12
         let maximumY = max(minimumY, visible.maxY - drawerHeight - 12)
-        let normalized = min(max(UserDefaults.standard.object(forKey: edgeHandlePositionKey) as? Double ?? 0.5, 0), 1)
+        let normalized = normalizedVerticalPosition(on: screen)
         let y = min(max(requestedY ?? (minimumY + (maximumY - minimumY) * normalized), minimumY), maximumY)
         let x = open ? visible.maxX - drawerWidth : visible.maxX - drawerGripWidth
         return NSPoint(x: x, y: y)
+    }
+
+    private func normalizedVerticalPosition(on screen: NSScreen) -> Double {
+        let defaults = UserDefaults.standard
+        guard let positionKey = verticalPositionKey(for: screen) else {
+            return min(max(defaults.object(forKey: edgeHandlePositionKey) as? Double ?? 0.5, 0), 1)
+        }
+
+        if let savedPosition = defaults.object(forKey: positionKey) as? Double {
+            return min(max(savedPosition, 0), 1)
+        }
+
+        // Move the former one-position setting to the first display only. New displays
+        // start centered, then remember their own position after the next drag.
+        if !defaults.bool(forKey: edgeHandlePositionMigrationKey) {
+            let legacyPosition = defaults.object(forKey: edgeHandlePositionKey) as? Double
+            if let legacyPosition {
+                defaults.set(legacyPosition, forKey: positionKey)
+            }
+            defaults.set(true, forKey: edgeHandlePositionMigrationKey)
+            if let legacyPosition {
+                return min(max(legacyPosition, 0), 1)
+            }
+        }
+
+        return 0.5
+    }
+
+    private func saveVerticalPosition(_ y: CGFloat, for screen: NSScreen, visibleFrame: NSRect) {
+        let minimumY = visibleFrame.minY + 12
+        let maximumY = max(minimumY, visibleFrame.maxY - drawerHeight - 12)
+        let normalized = Double((y - minimumY) / max(1, maximumY - minimumY))
+        UserDefaults.standard.set(normalized, forKey: verticalPositionKey(for: screen) ?? edgeHandlePositionKey)
+    }
+
+    private func verticalPositionKey(for screen: NSScreen) -> String? {
+        guard let displayNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            return nil
+        }
+        return "\(edgeHandlePositionKey).display.\(displayNumber.stringValue)"
     }
 
     private func primaryScreen() -> NSScreen? {

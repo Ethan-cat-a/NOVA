@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS source" src="https://img.shields.io/badge/source-1.8.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.8.0 keeps the drawer tab above your other apps and lets you hide it only when you choose.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.8.0/NOVA-Copilot-1.8.0.dmg"><strong>↓ Latest Mac app · 1.8.0 DMG</strong></a></p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/source-1.9.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Version 1.9.0 remembers the drawer position per display and smooths scrolling during streamed replies.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg"><strong>↓ Latest Mac app · 1.9.0 DMG</strong></a></p>
 </div>
 
 ---
@@ -20,6 +20,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 | Avatar eyes in the menu bar and a single drawer window with a built-in grip that stays visible at the right edge. | Fast, Hard Thinker and one CS Agent mode for coding, Word documents and plugins. | Review text extracted from screenshots, images, PDFs, code projects or a selected Chrome page before sending it to NOVA. |
 
 - Streaming responses stay in view while you’re at the bottom; use **Latest** to return after scrolling up.
+- Auto-scroll updates are coalesced during streaming, and the tucked drawer remembers its vertical placement for each display.
 - Retry a failed reply without losing the next message draft you’re writing.
 - Copy confirmations are brief, so they don’t crowd the panel.
 - Recent conversations to pick up where you left off.
@@ -47,7 +48,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the latest Mac app DMG (1.8.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.8.0/NOVA-Copilot-1.8.0.dmg).
+1. [Download the latest Mac app DMG (1.9.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 

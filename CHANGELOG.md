@@ -1,3 +1,9 @@
+# NOVA Copilot for macOS Version 1.9.0 (2026-11-17)
+
+- Remembers the drawer handle’s vertical placement independently on each display and migrates the existing saved position to the current display.
+- Coalesces streaming auto-scroll requests to at most 30 updates per second while keeping response text streaming as before.
+- Bumps the Mac marketing version to 1.9.0 and build number to 41.
+
 # NOVA Copilot for macOS Version 1.8.0 (2026-11-15)
 
 - Keeps the attached drawer tab above other app windows, including while the drawer is open.
