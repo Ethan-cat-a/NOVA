@@ -1,3 +1,20 @@
+# NOVA Copilot for Windows Version 1.7.0 (2026-11-18)
+
+- Adds a keyboard-first **Ctrl+K** command palette with filtering, arrow-key navigation and Enter-to-run actions.
+- Remembers per-monitor panel placement inside the monitor work area and supports a default chat mode per foreground app.
+- Adds keyboard-accessible text scaling and a Word handoff for any reply; review the document, choose a style, save it and open it with the default `.docx` app.
+- Adds a project patch workflow that sends only selected project context, shows a unified diff, allows approval per file, rechecks file contents, saves backups and never runs commands.
+- Adds a **Copy code** action for fenced code in responses and improves the terminal helper's copyable PowerShell suggestions.
+- Bumps the Windows source version to 1.7.0. The latest published Windows download remains 1.5.3.
+
+# NOVA Copilot for Windows Version 1.6.0 (2026-11-18)
+
+- Adds an optional per-user File Explorer **Send to NOVA** action for supported files, with a text preview before attaching.
+- Adds bounded, read-only project-folder context and an opt-in terminal-error explainer that suggests steps without executing commands.
+- Adds Clean, Report, Study guide and Meeting notes styles to the reviewed Word export flow.
+- Preserves saved sign-in and guest profiles when session refresh fails because of a temporary connection or service error.
+- Bumps the Windows source version to 1.6.0. The published Windows download remains 1.5.3 until a 1.6.0 release is built and published.
+
 # NOVA Copilot for macOS Version 1.9.0 (2026-11-17)
 
 - Remembers the drawer handle’s vertical placement independently on each display and migrates the existing saved position to the current display.

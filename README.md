@@ -13,7 +13,7 @@
   </p>
   <p>
     <img alt="macOS source" src="https://img.shields.io/badge/source-1.9.0-263C63?style=flat-square&logo=apple&logoColor=white" />
-    <img alt="Windows" src="https://img.shields.io/badge/Windows-1.5.3-2857C5?style=flat-square&logo=windows&logoColor=white" />
+    <img alt="Windows source" src="https://img.shields.io/badge/Windows%20source-1.7.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
 </div>
@@ -60,7 +60,7 @@
     </td>
     <td width="50%" valign="top">
       <h3>⊞ &nbsp; NOVA Copilot for Windows</h3>
-      <p><strong>Source version 1.5.3 · Python / Tkinter</strong></p>
+      <p><strong>Source version 1.7.0 · Python / Tkinter</strong></p>
       <p>A standalone Windows edition for Windows 10 and 11 PCs.</p>
       <ul>
         <li>Chat as a guest with optional Google or email/password sign-in</li>
@@ -69,15 +69,21 @@
         <li>Shortcut: <code>Ctrl + Shift + Space</code></li>
         <li>System tray and floating panel</li>
         <li>Word Doc mode, editable document drafts and reviewed PDF text</li>
+        <li>File Explorer “Send to NOVA” handoff and reviewed, read-only project-folder context</li>
+        <li>Terminal error explainer and four polished Word export styles</li>
+        <li>Ctrl+K command palette, per-app mode defaults and adjustable text size</li>
+        <li>Panel placement saved per monitor and work area</li>
+        <li>Reviewed code patch proposals with per-file approval and local backups</li>
+        <li>Session recovery that preserves profiles through temporary connection errors</li>
         <li>Copy, Try again and a manual update check</li>
       </ul>
       <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.3/NOVA-Copilot-Windows-1.5.3.exe"><strong>↓ Download Windows app · 1.5.3 EXE</strong></a></p>
-      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.5.3.md">Release notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
+      <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.7.0.md">Source 1.7.0 notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
     </td>
   </tr>
 </table>
 
-> Version 1.9.0 is the current published macOS release and download. Version 1.5.3 is the latest Windows release.
+> Version 1.9.0 is the current published macOS release and download. Windows source is at 1.7.0; 1.5.3 remains the latest Windows download until the next release is published.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
@@ -135,7 +141,7 @@ The Mac and Windows editions share the same product identity and NOVA V8 service
 - Chat requests go through the authenticated `https://nova-copilot-gateway.vercel.app/api/chat` service.
 - Conversation history is stored locally by each edition.
 - Clipboard text is only read when you explicitly choose the clipboard action.
-- The Mac edition can review extracted text from images, PDFs, Word, code files and a shared Chrome page before sending it. The Windows edition supports `.docx` and PDFs with selectable text; scanned-document OCR and image import are currently Mac-only.
+- The Mac edition can review extracted text from images, PDFs, Word, code files and a shared Chrome page before sending it. Windows can review `.docx`, PDFs, selected Explorer files and a bounded set of files from a folder you choose; code patches are previewed, approved by file, and backed up before applying. Scanned-document OCR and image import are currently Mac-only.
 - Screen/window capture uses the macOS 14 or later picker; importing images and PDFs works on macOS 13 or later.
 - CS Agent can save generated text as a new `.docx`; formatting, tables and images from an imported file are not preserved.
 - Local integrations are scoped: Git is read-only, Chrome page text needs a deliberate share and review, and app handoffs open Xcode or Word without typing into them.

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Published Windows tag to build (for example windows-v1.4.2)
+        description: Published Windows tag to build (for example windows-v1.7.0)
         required: true
         type: string
 
