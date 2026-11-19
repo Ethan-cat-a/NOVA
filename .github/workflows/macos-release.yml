@@ -35,7 +35,7 @@ jobs:
           fi
 
       - name: Build and package the universal Mac app
-        run: scripts/package-macos-release.sh "$RUNNER_TEMP/nova-release" "$RUNNER_TEMP/nova-derived"
+        run: bash scripts/package-macos-release.sh "$RUNNER_TEMP/nova-release" "$RUNNER_TEMP/nova-derived"
 
       - name: Upload the DMG and Sparkle archive
         env:
