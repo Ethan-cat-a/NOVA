@@ -1,3 +1,11 @@
+# NOVA Copilot for macOS Version 2.0.0 (2026-11-19)
+
+- Adds an opt-in CS Agent project-patch workflow. Choose a folder, inspect and select up to 12 bounded source files, then ask NOVA to propose a unified diff.
+- Validates that proposed changes apply to the exact selected files and rejects additions, deletions, renames, unsafe paths and stale file contents.
+- Shows each file diff with an unchecked approval control; applying requires a separate confirmation, saves backups in Application Support and rechecks files before writing.
+- Keeps project files out of requests until the user selects the files and asks for a patch. The app does not run shell commands, builds or tests, and does not commit or push.
+- Bumps the Mac marketing version to 2.0.0 and build number to 42.
+
 # NOVA Copilot for Windows Version 1.7.0 (2026-11-18)
 
 - Adds a keyboard-first **Ctrl+K** command palette with filtering, arrow-key navigation and Enter-to-run actions.

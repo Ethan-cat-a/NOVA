@@ -2,9 +2,9 @@
   <img src="https://raw.githubusercontent.com/Ethan-cat-a/NOVA/main/NOVA%20Copilot/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="88" height="88" alt="NOVA Copilot original app icon" />
   <h1>NOVA Copilot for macOS</h1>
   <p><strong>Your AI copilot. One shortcut away.</strong></p>
-  <p><img alt="macOS source" src="https://img.shields.io/badge/source-1.9.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
-  <p>Version 1.9.0 remembers the drawer position per display and smooths scrolling during streamed replies.</p>
-  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg"><strong>↓ Latest Mac app · 1.9.0 DMG</strong></a></p>
+  <p><img alt="macOS source" src="https://img.shields.io/badge/source-2.0.0-263C63?style=flat-square&logo=apple&logoColor=white" /> <img alt="macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-526B91?style=flat-square" /></p>
+  <p>Version 2.0.0 adds reviewable project patches to CS Agent.</p>
+  <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v2.0.0/NOVA-Copilot-2.0.0.dmg"><strong>↓ Latest Mac app · 2.0.0 DMG</strong></a></p>
 </div>
 
 ---
@@ -31,13 +31,15 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 - Completed replies to file-based questions can show a collapsed source-details row with the supplied filenames and PDF pages; NOVA is asked to cite only details present in the extracted text.
 - Add folders once, then enable **My Documents** for a single request. NOVA searches PDFs, Word, RTF, Markdown, text and common source-code files locally and sends at most four relevant excerpts only for that request.
 - CS Agent combines coding help, Word document creation/filling and Agent tools. Existing chats in Coding, Word Doc and Agent modes migrate to CS Agent.
+- **Project patches** let you choose a folder, inspect and select up to 12 supported source files, and ask CS Agent for a unified diff. NOVA validates the patch against the exact files it read, then shows per-file diffs and requires a separate confirmation before applying. It saves backups first, rejects stale or out-of-scope edits, and does not run commands, builds, or tests.
 - **Git status** can include a read-only summary for a selected repository when you opt in for a message. No file contents are read by Git; My Documents search remains a separate opt-in.
 - **Google Chrome** can open a Google Search for your question or share the current page after macOS access is allowed. NOVA extracts the page text locally and shows a preview; only the reviewed text is sent when you submit your message.
-- The CS Agent apps menu opens a selected project in Xcode or Microsoft Word. Allowlisted server plugins provide calculator, selected-document search and read-only public GitHub lookups. NOVA does not edit files, run arbitrary commands, commit/push changes or install third-party plugins.
+- The CS Agent apps menu opens a selected project in Xcode or Microsoft Word. Allowlisted server plugins provide calculator, selected-document search and read-only public GitHub lookups. Project files can change only through the reviewed patch flow and after per-file approval; NOVA does not run arbitrary commands, commit/push changes or install third-party plugins.
 - CS Agent can search public GitHub repositories and read public files, issues and pull requests. Access is read-only and does not reach private repositories.
 - Google Search remains a free, explicit handoff to Chrome; NOVA does not invoke a paid hosted web-search service.
 - CS Agent text now streams as the gateway receives it. Batched display updates, periodic history saves and live system-colored text reduce typing lag, scrolling churn and the brief white-text flash.
 - Without the per-message **My Documents** option, no text from the saved folders is sent. Document contents are not added to saved chat history.
+- In project-patch mode, only the checked source files are sent to NOVA. Local backups are stored in Application Support before the separately confirmed patch is applied.
 - Screen and window capture uses the macOS 14+ system picker; image and PDF import works on macOS 13+.
 - Import `.docx` or `.doc` files for text context. In CS Agent, choose **Make next reply a Word file** to create or fill a document, then review, edit and save the result as `.docx`.
 - New Word exports format headings, lists, bold, italics and code blocks. Existing page layouts, tables and images are not retained. One Word source and up to four reference files can be used per request.
@@ -48,7 +50,7 @@ A native Swift / AppKit assistant that brings NOVA V8 into a lightweight floatin
 
 ## Install
 
-1. [Download the latest Mac app DMG (1.9.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg).
+1. [Download the latest Mac app DMG (2.0.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/v2.0.0/NOVA-Copilot-2.0.0.dmg).
 2. Open the downloaded disk image and drag **NOVA Copilot.app** onto the **Applications** shortcut.
 3. Eject the disk image, then launch NOVA Copilot from Applications.
 
@@ -56,7 +58,7 @@ Requires **macOS 13 or later**. The universal build supports Apple silicon and I
 
 > **Upgrade:** Users on 1.2.0, 1.3.0 or 1.3.1 need to install 1.3.2 manually once. Users on 1.6.7 or 1.6.8 should install the 1.8.0 DMG manually once; their updater cannot install the Sparkle fix. Users on 1.6.9 and later can use the in-app updater.
 
-> **First launch:** This build is not signed with an Apple Developer ID or notarized. If macOS blocks it, Control-click **NOVA Copilot.app** in Applications, choose **Open**, then confirm **Open**. Only install apps from a source you trust.
+> **First launch:** This build is ad-hoc signed, not signed with an Apple Developer ID, and not notarized. If macOS blocks it, Control-click **NOVA Copilot.app** in Applications, choose **Open**, then confirm **Open**. Only install apps from a source you trust.
 
 ## Privacy
 

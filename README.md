@@ -3,16 +3,16 @@
   <h1>NOVA COPILOT</h1>
   <p><strong>Your AI copilot. Wherever you work.</strong></p>
   <p>A focused desktop companion for NOVA V8 — one shortcut away on Mac or Windows.</p>
-  <p><strong>macOS 1.9.0 remembers drawer placement per display and smooths scrolling during streamed replies.</strong></p>
+  <p><strong>macOS 2.0.0 adds reviewed project patches to CS Agent.</strong></p>
   <p>
-    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg"><strong>Download latest macOS app · 1.9.0 DMG</strong></a>
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v2.0.0/NOVA-Copilot-2.0.0.dmg"><strong>Download latest macOS app · 2.0.0 DMG</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.7.0/NOVA-Copilot-Windows-1.7.0.exe"><strong>Download Windows app · 1.7.0</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
   <p>
-    <img alt="macOS source" src="https://img.shields.io/badge/source-1.9.0-263C63?style=flat-square&logo=apple&logoColor=white" />
+    <img alt="macOS source" src="https://img.shields.io/badge/source-2.0.0-263C63?style=flat-square&logo=apple&logoColor=white" />
     <img alt="Windows source" src="https://img.shields.io/badge/Windows%20source-1.7.0-2857C5?style=flat-square&logo=windows&logoColor=white" />
     <img alt="Backend" src="https://img.shields.io/badge/AI-NOVA%20V8-526B91?style=flat-square" />
   </p>
@@ -26,7 +26,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3> &nbsp; NOVA Copilot for macOS</h3>
-      <p><strong>Release version 1.9.0 · Native Swift / AppKit</strong></p>
+      <p><strong>Source version 2.0.0 · Native Swift / AppKit</strong></p>
       <p>Built for Mac with an avatar-eyed menu-bar control, floating assistant panel and persistent draggable edge launcher.</p>
       <ul>
         <li>Chat as a guest with optional Google or email/password sign-in</li>
@@ -44,17 +44,18 @@
         <li>Optionally search PDFs, Word, RTF, Markdown, text and source-code files in folders you choose, one message at a time</li>
         <li>Document search runs locally; at most four relevant excerpts are sent only when you enable it</li>
         <li>CS Agent combines coding help, Word drafts and the existing allowlisted Agent plugins</li>
+        <li>Reviewable project patches: select source files, inspect each unified diff, approve files individually and save backups before changes</li>
         <li>Read-only public GitHub repository, file, issue and pull request lookups; no private-repository or write access</li>
         <li>CS Agent replies stream as they arrive with batched rendering and periodic chat-history saves</li>
         <li>Streaming auto-scroll is coalesced to keep long replies smoother while the text continues to appear promptly</li>
         <li>The drawer handle remembers its vertical position independently on each display</li>
         <li>Include read-only Git status for a selected repository on a single request</li>
         <li>Open a Google Search in Chrome or share the current page after reviewing its extracted text; open projects in Xcode or Microsoft Word</li>
-        <li>Local tools cannot modify project files, run arbitrary commands, commit or push changes, or install third-party plugins</li>
+        <li>Project changes require explicit per-file approval in the patch review; no arbitrary commands, builds, tests, commits or pushes</li>
         <li>Answer actions appear on hover, with Copy, Try again and Word export</li>
         <li>Matches the Mac’s light or dark appearance</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg"><strong>↓ Latest published Mac release · 1.9.0 DMG</strong></a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v2.0.0/NOVA-Copilot-2.0.0.dmg"><strong>↓ Latest published Mac release · 2.0.0 DMG</strong></a></p>
       <p><sub>Users on 1.2.0, 1.3.0, or 1.3.1 must install 1.3.2 manually once; users on 1.3.2 can update through the in-app updater.</sub></p>
       <p><a href="NOVA%20Copilot/README.md">Mac installation guide</a> · <a href="NOVA%20Copilot.xcodeproj">Xcode project</a></p>
     </td>
@@ -83,9 +84,9 @@
   </tr>
 </table>
 
-> Version 1.9.0 is the current published macOS release. Windows 1.7.0 is available as a standalone EXE below.
+> Version 2.0.0 is the current published macOS release. Windows 1.7.0 is available as a standalone EXE below.
 
-> **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
+> **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is ad-hoc signed but not signed with an Apple Developer ID or notarized; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
  > **Mac updater repair:** If you use 1.6.7 or 1.6.8, install the 1.8.0 DMG manually once; those versions cannot install their own updater fix. After that, approve Sparkle updates in-app as usual.
 
@@ -141,7 +142,7 @@ The Mac and Windows editions share the same product identity and NOVA V8 service
 - Chat requests go through the authenticated `https://nova-copilot-gateway.vercel.app/api/chat` service.
 - Conversation history is stored locally by each edition.
 - Clipboard text is only read when you explicitly choose the clipboard action.
-- The Mac edition can review extracted text from images, PDFs, Word, code files and a shared Chrome page before sending it. Windows can review `.docx`, PDFs, selected Explorer files and a bounded set of files from a folder you choose; code patches are previewed, approved by file, and backed up before applying. Scanned-document OCR and image import are currently Mac-only.
+- The Mac edition can review extracted text from images, PDFs, Word, code files and a shared Chrome page before sending it. In project-patch mode, only checked source files are sent; each diff is validated and individually approved before changes, with local backups. Windows can review `.docx`, PDFs, selected Explorer files and a bounded set of files from a folder you choose; code patches are previewed, approved by file, and backed up before applying. Scanned-document OCR and image import are currently Mac-only.
 - Screen/window capture uses the macOS 14 or later picker; importing images and PDFs works on macOS 13 or later.
 - CS Agent can save generated text as a new `.docx`; formatting, tables and images from an imported file are not preserved.
 - Local integrations are scoped: Git is read-only, Chrome page text needs a deliberate share and review, and app handoffs open Xcode or Word without typing into them.
@@ -162,6 +163,7 @@ NOVA/
 
 ## Releases
 
+- [NOVA Copilot for macOS — 2.0.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v2.0.0)
 - [NOVA Copilot for macOS — 1.9.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.9.0)
 - [NOVA Copilot for macOS — 1.8.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.8.0)
 - [NOVA Copilot for macOS — 1.7.2](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.7.2)
