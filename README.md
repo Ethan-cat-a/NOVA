@@ -7,7 +7,7 @@
   <p>
     <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.dmg"><strong>Download latest macOS app · 1.9.0 DMG</strong></a>
     &nbsp; · &nbsp;
-    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.3/NOVA-Copilot-Windows-1.5.3.exe"><strong>Download Windows app · 1.5.3</strong></a>
+    <a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.7.0/NOVA-Copilot-Windows-1.7.0.exe"><strong>Download Windows app · 1.7.0</strong></a>
     &nbsp; · &nbsp;
     <a href="https://github.com/Ethan-cat-a/NOVA/releases"><strong>All releases</strong></a>
   </p>
@@ -77,19 +77,19 @@
         <li>Session recovery that preserves profiles through temporary connection errors</li>
         <li>Copy, Try again and a manual update check</li>
       </ul>
-      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.3/NOVA-Copilot-Windows-1.5.3.exe"><strong>↓ Download Windows app · 1.5.3 EXE</strong></a></p>
+      <p><a href="https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.7.0/NOVA-Copilot-Windows-1.7.0.exe"><strong>↓ Download Windows app · 1.7.0 EXE</strong></a></p>
       <p><a href="NOVA%20Copilot%20Windows/README.md">Windows installation guide</a> · <a href="NOVA%20Copilot%20Windows/RELEASE_NOTES_v1.7.0.md">Source 1.7.0 notes</a> · <a href="NOVA%20Copilot%20Windows/">Source</a></p>
     </td>
   </tr>
 </table>
 
-> Version 1.9.0 is the current published macOS release and download. Windows source is at 1.7.0; 1.5.3 remains the latest Windows download until the next release is published.
+> Version 1.9.0 is the current published macOS release. Windows 1.7.0 is available as a standalone EXE below.
 
 > **Mac install:** Open the downloaded DMG and drag **NOVA Copilot.app** onto the **Applications** shortcut. This build is not signed with an Apple Developer ID; macOS may ask you to approve it under **System Settings → Privacy & Security** the first time.
 
  > **Mac updater repair:** If you use 1.6.7 or 1.6.8, install the 1.8.0 DMG manually once; those versions cannot install their own updater fix. After that, approve Sparkle updates in-app as usual.
 
-> **Windows install:** Download and open the Windows 1.5.3 EXE above; no ZIP extraction or Python install is needed. The app is unsigned, so Windows SmartScreen may show a warning. GitHub Actions builds it on a Windows runner.
+> **Windows install:** Download and open the Windows 1.7.0 EXE above; no ZIP extraction or Python install is needed. The app is unsigned, so Windows SmartScreen may show a warning. GitHub Actions builds it on a Windows runner.
 
 ## The essentials
 
@@ -169,7 +169,7 @@ NOVA/
 - [NOVA Copilot for macOS — 1.7.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.7.0)
 - [NOVA Copilot for macOS — 1.6.9](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.9)
 - [NOVA Copilot for macOS — 1.6.7](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.7)
-- [NOVA Copilot for Windows — 1.5.3](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.5.3)
+- [NOVA Copilot for Windows — 1.7.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.7.0)
 - [NOVA Copilot for macOS — 1.6.6](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.6)
 - [NOVA Copilot for macOS — 1.6.0](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.6.0)
 - [NOVA Copilot for macOS — 1.5.6](https://github.com/Ethan-cat-a/NOVA/releases/tag/v1.5.6)

@@ -4,14 +4,14 @@
   <p><strong>Your AI copilot on Windows 10 and 11.</strong></p>
   <p><img alt="Windows source version" src="https://img.shields.io/badge/source-1.7.0-2857C5?style=flat-square&logo=windows&logoColor=white" /></p>
   <p>Standalone Windows edition · Python / Tkinter · NOVA V8 backend</p>
-  <p>Source version 1.7.0 adds a command palette, per-app mode defaults, monitor-aware placement and a reviewed code-patch workflow. The latest downloadable Windows release is still 1.5.3 until a newer build is published. NOVA starts a guest profile automatically; signing in to an existing Google or email/password account is optional.</p>
+  <p>Source version 1.7.0 adds a command palette, per-app mode defaults, monitor-aware placement and a reviewed code-patch workflow. NOVA starts a guest profile automatically; signing in to an existing Google or email/password account is optional.</p>
 </div>
 
 ---
 
 ## Download
 
-Download and open the [standalone NOVA Copilot for Windows (1.5.3)](https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.5.3/NOVA-Copilot-Windows-1.5.3.exe). It runs without Python or ZIP extraction.
+Download and open the [standalone NOVA Copilot for Windows (1.7.0)](https://github.com/Ethan-cat-a/NOVA/releases/download/windows-v1.7.0/NOVA-Copilot-Windows-1.7.0.exe). It runs without Python or ZIP extraction.
 
 Windows SmartScreen may warn because this free build is unsigned. Choose **More info → Run anyway** only if you downloaded the EXE from the official NOVA GitHub release.
 

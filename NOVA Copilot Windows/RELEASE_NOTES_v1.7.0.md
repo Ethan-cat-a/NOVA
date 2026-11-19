@@ -22,6 +22,6 @@ Windows source update notes · 2026-11-18
 - Patch application rejects paths outside the selected folder, files not in the reviewed preview, file creation/deletion/rename, stale source contents and malformed diffs. Each selected file requires explicit approval; backups are saved before changes.
 - App mode preferences store executable names only. NOVA does not read the foreground app's contents.
 
-## Download status
+## Download
 
-These are Windows 1.7.0 source changes. The latest published Windows installer remains 1.5.3 until a 1.7.0 executable is built and released. See the [Windows guide](README.md) for the current download.
+The standalone Windows installer is available on the [1.7.0 GitHub release](https://github.com/Ethan-cat-a/NOVA/releases/tag/windows-v1.7.0). See the [Windows guide](README.md) for installation instructions.

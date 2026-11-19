@@ -5,7 +5,7 @@
 - Adds keyboard-accessible text scaling and a Word handoff for any reply; review the document, choose a style, save it and open it with the default `.docx` app.
 - Adds a project patch workflow that sends only selected project context, shows a unified diff, allows approval per file, rechecks file contents, saves backups and never runs commands.
 - Adds a **Copy code** action for fenced code in responses and improves the terminal helper's copyable PowerShell suggestions.
-- Bumps the Windows source version to 1.7.0. The latest published Windows download remains 1.5.3.
+- Bumps the Windows source version to 1.7.0 and publishes the standalone EXE in the Windows release.
 
 # NOVA Copilot for Windows Version 1.6.0 (2026-11-18)
 
