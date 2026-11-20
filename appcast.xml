@@ -7,25 +7,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>NOVA Copilot software updates</description>
     <language>en</language>
     <item>
-      <title>Version 1.9.0</title>
-      <pubDate>Tue, 17 Nov 2026 11:32:36 GMT</pubDate>
-      <sparkle:version>41</sparkle:version>
-      <sparkle:shortVersionString>1.9.0</sparkle:shortVersionString>
+      <title>Version 2.0.0</title>
+      <pubDate>Fri, 20 Nov 2026 00:50:56 GMT</pubDate>
+      <sparkle:version>42</sparkle:version>
+      <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <sparkle:fullReleaseNotesLink>https://github.com/Ethan-cat-a/NOVA/blob/main/NOVA%20Copilot/RELEASE_NOTES_v1.9.0.md</sparkle:fullReleaseNotesLink>
+      <sparkle:fullReleaseNotesLink>https://github.com/Ethan-cat-a/NOVA/blob/main/NOVA%20Copilot/RELEASE_NOTES_v2.0.0.md</sparkle:fullReleaseNotesLink>
       <description sparkle:descriptionFormat="plain-text"><![CDATA[
-This update makes NOVA’s drawer and streaming replies feel steadier during everyday use.
+• Restores the Swift source file that was corrupted in the first source snapshot.
+• Builds the universal app with one Xcode build job at a time to avoid runner stalls.
 
-• Remembers the drawer handle’s vertical position separately on each display. Your existing saved position is kept on the display NOVA first opens on.
-• Updates the streaming auto-scroll at most 30 times per second to reduce repeated layout work during long replies.
-• Keeps response text streaming immediately; only the automatic scrolling is coalesced.
+CS Agent can now prepare a code patch for a project folder you choose.
 
-Universal macOS build for Apple silicon and Intel Macs running macOS 13 or later.
+• Review the supported source-file list and choose exactly which files NOVA may read for the request.
+• NOVA proposes a unified diff for existing files only. The app checks that paths stay in the selected project and that the source has not changed since it was read.
+• Inspect each file’s diff, select the files you want, and confirm before applying. NOVA saves local backups first.
+• The workflow does not run commands, builds or tests, and does not commit or push.
+
+• macOS marketing version: 2.0.0
+• Build number: 42
+• The release includes the universal app for Apple silicon and Intel Macs running macOS 13 or later.
+• The app is ad-hoc signed, not signed with an Apple Developer ID, and not notarized; macOS may ask you to approve it on first launch.
       ]]></description>
-      <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v1.9.0/NOVA-Copilot-1.9.0.zip" length="5435787" type="application/octet-stream" sparkle:edSignature="jZE1naLA3QwYcR5ZrhOZSDJZh4sIy+fq4iltzSkmRab2scXHG5qK13DOz3kQhMIFIEo4U1/RaLtfk5bUbd0uBA=="></enclosure>
+      <enclosure url="https://github.com/Ethan-cat-a/NOVA/releases/download/v2.0.0/NOVA-Copilot-2.0.0.zip" length="5574600" type="application/octet-stream" sparkle:edSignature="pqHhw/diJs8PSxKrnjy0yv+++okXVuUnKkcriWYWwDuEhU7ZFX/RoecWNdlDvJ/pwtizb3nhtLwyFEXUraN5CQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: YU4zFvoLfKc1XE6sSYfgZjCK4diQbKkdt2DvOo8TVncgTDUvsfQ3JEs+exG5wU8uhRmi8Fbu46te0Q9t53zLAQ==
-length: 1944
+edSignature: nCIEgMqwlhtjglJioazDVSTcQivjTd3tVtMKZQw6wXIDMDLX27DLUB7q8I8bKh/cs78pPo2DUXl8SMiRy1duDA==
+length: 2426
 -->
