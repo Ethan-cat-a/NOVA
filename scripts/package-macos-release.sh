@@ -26,6 +26,7 @@ if [[ -z "$version" ]]; then
 fi
 
 xcodebuild \
+  -jobs 1 \
   -project "$project" \
   -scheme "$scheme" \
   -configuration Release \

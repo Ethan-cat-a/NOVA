@@ -1,5 +1,10 @@
 # NOVA Copilot for macOS 2.0.0
 
+## Release build fix
+
+- Restores the Swift source file that was corrupted in the first source snapshot.
+- Builds the universal app with one Xcode build job at a time to avoid runner stalls.
+
 ## Reviewable project patches
 
 CS Agent can now prepare a code patch for a project folder you choose.

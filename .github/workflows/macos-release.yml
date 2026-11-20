@@ -9,6 +9,11 @@ on:
         description: Existing release tag to build and upload
         required: true
         type: string
+      source_ref:
+        description: Branch or tag containing the corrected release source
+        required: true
+        default: main
+        type: string
 
 permissions:
   contents: write
@@ -17,12 +22,12 @@ jobs:
   build-and-upload:
     if: startsWith(github.event.release.tag_name || inputs.release_tag, 'v')
     runs-on: macos-15-intel
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Check out the release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
+          ref: ${{ inputs.source_ref || github.event.release.tag_name || inputs.release_tag }}
 
       - name: Verify the project version matches the release tag
         env:
@@ -41,7 +46,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
         run: |
           version="${RELEASE_TAG#v}"
           gh release upload "$RELEASE_TAG" \

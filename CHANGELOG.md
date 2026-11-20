@@ -1,5 +1,6 @@
 # NOVA Copilot for macOS Version 2.0.0 (2026-11-19)
 
+- Restores the valid UTF-8 Swift source in the published release tree and builds the universal app sequentially to avoid Xcode runner stalls.
 - Adds an opt-in CS Agent project-patch workflow. Choose a folder, inspect and select up to 12 bounded source files, then ask NOVA to propose a unified diff.
 - Validates that proposed changes apply to the exact selected files and rejects additions, deletions, renames, unsafe paths and stale file contents.
 - Shows each file diff with an unchecked approval control; applying requires a separate confirmation, saves backups in Application Support and rechecks files before writing.
